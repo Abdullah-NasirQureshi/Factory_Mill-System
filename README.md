@@ -26,16 +26,16 @@ The system follows a three-layer architecture:
 
 ```
 .
-├── .kiro/
-│   └── specs/
-│       └── factory-erp-system/
-│           ├── requirements.md    # Detailed requirements with acceptance criteria
-│           ├── design.md          # System design and architecture
-│           └── tasks.md           # Implementation task list
+├── factory-erp-system/
+│   ├── requirements.md           # Detailed requirements with acceptance criteria
+│   ├── design.md                 # System design and architecture
+│   ├── tasks.md                  # Implementation task list
+│   └── frontend-reference.md     # Frontend design reference notes
 ├── reference/
 │   └── erp_system.html           # Reference UI design and styling
 ├── backend/                       # Node.js backend (to be created)
 ├── frontend/                      # React frontend (to be created)
+├── .gitignore
 └── README.md
 ```
 
@@ -53,9 +53,10 @@ Instructions will be added once the implementation begins.
 
 ## 📖 Documentation
 
-- **Requirements**: See `.kiro/specs/factory-erp-system/requirements.md`
-- **Design**: See `.kiro/specs/factory-erp-system/design.md`
-- **Tasks**: See `.kiro/specs/factory-erp-system/tasks.md`
+- **Requirements**: See `factory-erp-system/requirements.md`
+- **Design**: See `factory-erp-system/design.md`
+- **Tasks**: See `factory-erp-system/tasks.md`
+- **Frontend Reference**: See `factory-erp-system/frontend-reference.md`
 
 ## 🎨 Design System
 
@@ -107,7 +108,7 @@ The system includes:
 
 ## 👨‍💻 Development Status
 
-Currently in specification phase. Implementation will follow the task list in `.kiro/specs/factory-erp-system/tasks.md`.
+Currently in specification phase. Implementation will follow the task list in `factory-erp-system/tasks.md`.
 
 ## 🤝 Contributing
 
