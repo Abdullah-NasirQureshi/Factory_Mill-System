@@ -1,0 +1,3593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MillFlow - Flour Mill ERP System</title>
+    <style>
+        /* ============================================
+           DESIGN SYSTEM & VARIABLES
+           ============================================ */
+        :root {
+            /* Primary Colors */
+            --primary: #1e3a5f;
+            --primary-light: #2c5282;
+            --primary-dark: #152a45;
+
+            /* Secondary Colors */
+            --secondary: #f7fafc;
+            --secondary-dark: #e2e8f0;
+
+            /* Semantic Colors */
+            --success: #38a169;
+            --success-light: #c6f6d5;
+            --warning: #ed8936;
+            --warning-light: #feebc8;
+            --danger: #e53e3e;
+            --danger-light: #fed7d7;
+            --info: #3182ce;
+
+            /* Text Colors */
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+
+            /* Background */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7fafc;
+            --bg-tertiary: #edf2f7;
+
+            /* Spacing Scale */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+
+            /* Border Radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            /* Typography */
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', monospace;
+
+            /* Touch Targets */
+            --touch-min: 44px;
+
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 250ms ease;
+        }
+
+        /* ============================================
+           RESET & BASE STYLES
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: var(--space-sm); }
+        .gap-4 { gap: var(--space-md); }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .text-center { text-align: center; }
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ============================================
+           BUTTONS
+           ============================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            padding: var(--space-md) var(--space-lg);
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            min-height: var(--touch-min);
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-primary);
+            border: 2px solid var(--secondary-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2f855a;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+        }
+
+        .btn-lg {
+            padding: var(--space-lg) var(--space-xl);
+            font-size: 1.125rem;
+            min-height: 56px;
+        }
+
+        .btn-icon {
+            padding: var(--space-md);
+            min-width: var(--touch-min);
+        }
+
+        /* ============================================
+           CARDS
+           ============================================ */
+        .card {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-fast);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-body {
+            padding: var(--space-lg);
+        }
+
+        .card-interactive {
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .card-interactive:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .card-interactive:active {
+            transform: translateY(0);
+        }
+
+        .card-interactive.selected {
+            border-color: var(--primary);
+            background: var(--secondary);
+        }
+
+        /* ============================================
+           FORMS
+           ============================================ */
+        .form-group {
+            margin-bottom: var(--space-lg);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--space-md);
+            font-size: 1rem;
+            border: 2px solid var(--secondary-dark);
+            border-radius: var(--radius-lg);
+            background: white;
+            transition: all var(--transition-fast);
+            min-height: var(--touch-min);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ============================================
+           LAYOUT COMPONENTS
+           ============================================ */
+
+        /* Top Navigation */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: white;
+            box-shadow: var(--shadow-sm);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 var(--space-lg);
+            gap: var(--space-lg);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .nav-logo svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-search {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .nav-search input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            padding-left: 2.5rem;
+            border: 2px solid var(--secondary-dark);
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+        }
+
+        .nav-search svg {
+            position: absolute;
+            left: var(--space-md);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .nav-btn {
+            position: relative;
+            padding: var(--space-sm);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--primary);
+        }
+
+        .nav-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 18px;
+            height: 18px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.625rem;
+            font-weight: 700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm);
+            cursor: pointer;
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-fast);
+        }
+
+        .user-menu:hover {
+            background: var(--bg-secondary);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            bottom: 0;
+            width: 260px;
+            background: white;
+            border-right: 1px solid var(--secondary-dark);
+            z-index: 900;
+            overflow-y: auto;
+            padding: var(--space-lg);
+            transition: transform var(--transition-base);
+        }
+
+        .sidebar-section {
+            margin-bottom: var(--space-xl);
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            padding-left: var(--space-md);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-md);
+            border-radius: var(--radius-lg);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            margin-bottom: var(--space-xs);
+        }
+
+        .nav-item:hover {
+            background: var(--bg-secondary);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            margin-top: 64px;
+            padding: var(--space-xl);
+            min-height: calc(100vh - 64px);
+        }
+
+        /* Mobile Bottom Nav */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: var(--space-sm) 0;
+            padding-bottom: env(safe-area-inset-bottom, 8px);
+        }
+
+        .mobile-nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: var(--space-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            min-width: 64px;
+            transition: all var(--transition-fast);
+        }
+
+        .mobile-nav-item.active {
+            color: var(--primary);
+        }
+
+        .mobile-nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-xl);
+            flex-wrap: wrap;
+            gap: var(--space-md);
+        }
+
+        .page-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .page-actions {
+            display: flex;
+            gap: var(--space-md);
+        }
+
+        /* ============================================
+           DASHBOARD COMPONENTS
+           ============================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            transition: all var(--transition-fast);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue { background: #ebf8ff; color: var(--info); }
+        .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-icon.orange { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.red { background: var(--danger-light); color: var(--danger); }
+
+        .stat-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: var(--space-xs);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: var(--space-xs);
+        }
+
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--danger); }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-xl);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        /* Activity List */
+        .activity-list {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-md) 0;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-md);
+            margin-top: var(--space-xl);
+        }
+
+        .quick-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-xl);
+            background: white;
+            border: 2px solid var(--secondary-dark);
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--primary);
+            background: var(--secondary);
+        }
+
+        .quick-action-btn svg {
+            width: 32px;
+            height: 32px;
+            color: var(--primary);
+        }
+
+        .quick-action-btn span {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           SALES/BILLING PAGE (POS STYLE)
+           ============================================ */
+        .billing-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: var(--space-lg);
+            height: calc(100vh - 140px);
+        }
+
+        .billing-main {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+            overflow-y: auto;
+        }
+
+        .product-section {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .product-card {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            padding: var(--space-md);
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .product-card:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .product-card.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .product-card.selected .product-name,
+        .product-card.selected .product-stock {
+            color: white;
+        }
+
+        .product-icon {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .product-card.selected .product-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .product-stock {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Weight Cards */
+        .weight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .weight-card {
+            padding: var(--space-lg);
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 700;
+            font-size: 1.125rem;
+        }
+
+        .weight-card:hover {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .weight-card.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Cart Section */
+        .cart-panel {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .cart-header {
+            padding: var(--space-lg);
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .cart-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-md);
+        }
+
+        .cart-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: var(--space-md);
+            align-items: center;
+            padding: var(--space-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-sm);
+        }
+
+        .cart-item-info {
+            min-width: 0;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .cart-item-details {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .cart-item-qty {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .qty-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: white;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+
+        .qty-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .qty-value {
+            min-width: 24px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .cart-item-price {
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .cart-item-remove {
+            padding: var(--space-xs);
+            border: none;
+            background: transparent;
+            color: var(--danger);
+            cursor: pointer;
+            border-radius: var(--radius-md);
+        }
+
+        .cart-item-remove:hover {
+            background: var(--danger-light);
+        }
+
+        .cart-summary {
+            padding: var(--space-lg);
+            border-top: 1px solid var(--bg-tertiary);
+            background: var(--bg-secondary);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-sm);
+            font-size: 0.875rem;
+        }
+
+        .summary-row.total {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-top: 2px solid var(--secondary-dark);
+            padding-top: var(--space-md);
+            margin-top: var(--space-md);
+        }
+
+        .cart-actions {
+            padding: var(--space-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        /* Customer Selector */
+        .customer-selector {
+            position: relative;
+            margin-bottom: var(--space-md);
+        }
+
+        .customer-dropdown {
+            width: 100%;
+            padding: var(--space-md);
+            border: 2px solid var(--secondary-dark);
+            border-radius: var(--radius-lg);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .customer-dropdown:hover {
+            border-color: var(--primary);
+        }
+
+        /* ============================================
+           TABLES
+           ============================================ */
+        .table-container {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: var(--space-lg);
+            border-bottom: 1px solid var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+        }
+
+        .table-search {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .table-search input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            padding-left: 2.5rem;
+            border: 2px solid var(--secondary-dark);
+            border-radius: var(--radius-lg);
+        }
+
+        .table-search svg {
+            position: absolute;
+            left: var(--space-md);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: var(--space-md) var(--space-lg);
+            text-align: left;
+        }
+
+        .data-table th {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid var(--bg-tertiary);
+            transition: background var(--transition-fast);
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .data-table td {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        /* ============================================
+           MODALS
+           ============================================ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-lg);
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-base);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform var(--transition-base);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: var(--space-xl);
+            border-bottom: 1px solid var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            padding: var(--space-sm);
+            border: none;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .modal-body {
+            padding: var(--space-xl);
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: var(--space-xl);
+            border-top: 1px solid var(--bg-tertiary);
+            display: flex;
+            gap: var(--space-md);
+            justify-content: flex-end;
+        }
+
+        /* ============================================
+           LOGIN PAGE
+           ============================================ */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: var(--space-lg);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 420px;
+            padding: var(--space-2xl);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .login-logo svg {
+            width: 64px;
+            height: 64px;
+            color: var(--primary);
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: var(--space-xs);
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: var(--space-xl);
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+
+        .login-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .forgot-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ============================================
+           INVOICE PRINT STYLES
+           ============================================ */
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: var(--space-2xl);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-2xl);
+            padding-bottom: var(--space-xl);
+            border-bottom: 2px solid var(--bg-tertiary);
+        }
+
+        .invoice-company h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .invoice-company p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .invoice-meta {
+            text-align: right;
+        }
+
+        .invoice-meta h3 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .invoice-meta p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .invoice-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+            margin-bottom: var(--space-xl);
+        }
+
+        .invoice-section h4 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+
+        .invoice-section p {
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .invoice-table {
+            width: 100%;
+            margin-bottom: var(--space-xl);
+        }
+
+        .invoice-table th {
+            background: var(--bg-secondary);
+            padding: var(--space-md);
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .invoice-table td {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--bg-tertiary);
+            font-size: 0.875rem;
+        }
+
+        .invoice-table .text-right {
+            text-align: right;
+        }
+
+        .invoice-totals {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: var(--space-2xl);
+        }
+
+        .totals-table {
+            width: 300px;
+        }
+
+        .totals-table td {
+            padding: var(--space-sm) 0;
+            font-size: 0.875rem;
+        }
+
+        .totals-table .total-row {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-top: 2px solid var(--primary);
+            padding-top: var(--space-md);
+        }
+
+        .invoice-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+            margin-top: var(--space-2xl);
+            padding-top: var(--space-xl);
+            border-top: 1px solid var(--bg-tertiary);
+        }
+
+        .signature-area {
+            min-height: 80px;
+            border-bottom: 1px solid var(--text-muted);
+        }
+
+        /* ============================================
+           RESPONSIVE STYLES
+           ============================================ */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .billing-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .cart-panel {
+                position: fixed;
+                bottom: 80px;
+                right: var(--space-lg);
+                left: var(--space-lg);
+                max-height: 60vh;
+                z-index: 100;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-nav {
+                padding: 0 var(--space-md);
+            }
+
+            .nav-search {
+                display: none;
+            }
+
+            .main-content {
+                padding: var(--space-md);
+                margin-bottom: 80px;
+            }
+
+            .mobile-nav {
+                display: block;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--space-md);
+            }
+
+            .stat-card {
+                padding: var(--space-md);
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .stat-icon {
+                width: 48px;
+                height: 48px;
+            }
+
+            .stat-value {
+                font-size: 1.25rem;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .weight-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .table-search {
+                max-width: none;
+            }
+
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .billing-container {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .cart-panel {
+                position: relative;
+                bottom: auto;
+                right: auto;
+                left: auto;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--space-sm);
+            }
+
+            .product-card {
+                padding: var(--space-sm);
+            }
+
+            .weight-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .modal {
+                margin: var(--space-md);
+                max-height: calc(100vh - var(--space-xl));
+            }
+        }
+
+        /* ============================================
+           PRINT STYLES
+           ============================================ */
+        @media print {
+            .top-nav,
+            .sidebar,
+            .mobile-nav,
+            .page-header,
+            .btn {
+                display: none !important;
+            }
+
+            .main-content {
+                margin: 0;
+                padding: 0;
+            }
+
+            .invoice-container {
+                box-shadow: none;
+                padding: 0;
+            }
+
+            body {
+                background: white;
+            }
+        }
+
+        /* ============================================
+           ANIMATIONS
+           ============================================ */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: var(--space-lg);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .toast {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: var(--space-md) var(--space-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================
+         SVG ICONS (Hidden Sprite)
+         ============================================ -->
+    <svg style="display: none;">
+        <defs>
+            <symbol id="icon-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </symbol>
+            <symbol id="icon-sales" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </symbol>
+            <symbol id="icon-customers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </symbol>
+            <symbol id="icon-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </symbol>
+            <symbol id="icon-inventory" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+            </symbol>
+            <symbol id="icon-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </symbol>
+            <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </symbol>
+            <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </symbol>
+            <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </symbol>
+            <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </symbol>
+            <symbol id="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </symbol>
+            <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </symbol>
+            <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </symbol>
+            <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </symbol>
+            <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </symbol>
+            <symbol id="icon-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </symbol>
+            <symbol id="icon-trending-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </symbol>
+            <symbol id="icon-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </symbol>
+            <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </symbol>
+            <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </symbol>
+            <symbol id="icon-printer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+            </symbol>
+            <symbol id="icon-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="19" cy="12" r="1"></circle>
+                <circle cx="5" cy="12" r="1"></circle>
+            </symbol>
+        </defs>
+    </svg>
+
+    <!-- ============================================
+         LOGIN PAGE
+         ============================================ -->
+    <div id="page-login" class="login-page">
+        <div class="login-card animate-in">
+            <div class="login-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+            <h1 class="login-title">MillFlow ERP</h1>
+            <p class="login-subtitle">Flour Mill Management System</p>
+
+            <form class="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Username / Email</label>
+                    <input type="text" class="form-input" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" placeholder="Enter password" required>
+                </div>
+                <div class="login-options">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================
+         MAIN APP SHELL (Hidden initially)
+         ============================================ -->
+    <div id="app-shell" class="hidden">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <a href="#" class="nav-logo" onclick="showPage('dashboard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+                <span>MillFlow</span>
+            </a>
+
+            <div class="nav-search">
+                <svg><use href="#icon-search"></use></svg>
+                <input type="text" placeholder="Search customers, products...">
+            </div>
+
+            <div class="nav-actions">
+                <button class="nav-btn" onclick="showNotifications()">
+                    <svg><use href="#icon-bell"></use></svg>
+                    <span class="badge">3</span>
+                </button>
+                <div class="user-menu" onclick="toggleUserMenu()">
+                    <div class="user-avatar">JD</div>
+                    <span class="hidden-mobile">John Doe</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Main Menu</div>
+                <a href="#" class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
+                    <svg><use href="#icon-dashboard"></use></svg>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('sales')" data-page="sales">
+                    <svg><use href="#icon-sales"></use></svg>
+                    <span>Sales / Billing</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('customers')" data-page="customers">
+                    <svg><use href="#icon-customers"></use></svg>
+                    <span>Customers</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('products')" data-page="products">
+                    <svg><use href="#icon-products"></use></svg>
+                    <span>Products</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('inventory')" data-page="inventory">
+                    <svg><use href="#icon-inventory"></use></svg>
+                    <span>Inventory</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('reports')" data-page="reports">
+                    <svg><use href="#icon-reports"></use></svg>
+                    <span>Reports</span>
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">System</div>
+                <a href="#" class="nav-item" onclick="showPage('settings')" data-page="settings">
+                    <svg><use href="#icon-settings"></use></svg>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- ============================================
+                 DASHBOARD PAGE
+                 ============================================ -->
+            <div id="page-dashboard" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" onclick="refreshDashboard()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <svg><use href="#icon-dollar"></use></svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Today's Sales</div>
+                            <div class="stat-value">₹45,250</div>
+                            <div class="stat-change positive">+12% from yesterday</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <svg><use href="#icon-package"></use></svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Total Orders</div>
+                            <div class="stat-value">28</div>
+                            <div class="stat-change positive">+5 today</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <svg><use href="#icon-inventory"></use></svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Inventory Value</div>
+                            <div class="stat-value">₹2.4L</div>
+                            <div class="stat-change">1,240 bags</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <svg><use href="#icon-users"></use></svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Outstanding</div>
+                            <div class="stat-value">₹1,85,000</div>
+                            <div class="stat-change negative">Due from 12 customers</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Daily Sales Trend</h3>
+                            <select class="form-input" style="width: auto; padding: var(--space-sm);">
+                                <option>Last 7 Days</option>
+                                <option>Last 30 Days</option>
+                                <option>This Month</option>
+                            </select>
+                        </div>
+                        <div class="chart-placeholder">
+                            <div style="text-align: center;">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e0" stroke-width="1" style="margin-bottom: var(--space-md);">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                <p>Sales Chart Visualization</p>
+                                <p style="font-size: 0.875rem; margin-top: var(--space-sm);">Daily revenue for the past week</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-list">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Recent Activity</h3>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar">RS</div>
+                            <div class="activity-content">
+                                <div class="activity-text">New sale to <strong>Ramesh Stores</strong></div>
+                                <div class="activity-time">10 bags Wheat Flour (50kg) - ₹12,500</div>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">2m ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar">SK</div>
+                            <div class="activity-content">
+                                <div class="activity-text">Payment received from <strong>Suresh Kumar</strong></div>
+                                <div class="activity-time">₹8,500 via Cash</div>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">15m ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar">GM</div>
+                            <div class="activity-content">
+                                <div class="activity-text">Stock added: <strong>Geeta Mills</strong></div>
+                                <div class="activity-time">50 bags Maida (40kg) added to inventory</div>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--info); font-weight: 600;">1h ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar">PG</div>
+                            <div class="activity-content">
+                                <div class="activity-text">New customer added: <strong>Patel Grocery</strong></div>
+                                <div class="activity-time">Nagpur, Maharashtra</div>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">2h ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="showPage('sales')">
+                        <svg><use href="#icon-plus"></use></svg>
+                        <span>Create New Bill</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="openModal('add-customer')">
+                        <svg><use href="#icon-users"></use></svg>
+                        <span>Add Customer</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="openModal('add-product')">
+                        <svg><use href="#icon-package"></use></svg>
+                        <span>Add Product</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 SALES / BILLING PAGE (POS STYLE)
+                 ============================================ -->
+            <div id="page-sales" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">New Sale</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" onclick="clearCart()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="billing-container">
+                    <!-- Left Side: Product Selection -->
+                    <div class="billing-main">
+                        <!-- Customer Selection -->
+                        <div class="product-section">
+                            <div class="section-title">Select Customer</div>
+                            <div class="customer-selector">
+                                <div class="customer-dropdown" onclick="toggleCustomerDropdown()">
+                                    <span id="selected-customer">Choose a customer...</span>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Products Grid -->
+                        <div class="product-section">
+                            <div class="section-title">Select Product</div>
+                            <div class="product-grid" id="product-grid">
+                                <div class="product-card" onclick="selectProduct(this, 'Wheat Flour')">
+                                    <div class="product-icon">🌾</div>
+                                    <div class="product-name">Wheat Flour</div>
+                                    <div class="product-stock">Stock: 450 bags</div>
+                                </div>
+                                <div class="product-card" onclick="selectProduct(this, 'Besan')">
+                                    <div class="product-icon">🟡</div>
+                                    <div class="product-name">Besan</div>
+                                    <div class="product-stock">Stock: 320 bags</div>
+                                </div>
+                                <div class="product-card" onclick="selectProduct(this, 'Maida')">
+                                    <div class="product-icon">⚪</div>
+                                    <div class="product-name">Maida</div>
+                                    <div class="product-stock">Stock: 280 bags</div>
+                                </div>
+                                <div class="product-card" onclick="selectProduct(this, 'Suji')">
+                                    <div class="product-icon">🟠</div>
+                                    <div class="product-name">Suji</div>
+                                    <div class="product-stock">Stock: 190 bags</div>
+                                </div>
+                                <div class="product-card" onclick="selectProduct(this, 'Atta')">
+                                    <div class="product-icon">🍞</div>
+                                    <div class="product-name">Atta</div>
+                                    <div class="product-stock">Stock: 520 bags</div>
+                                </div>
+                                <div class="product-card" onclick="selectProduct(this, 'Rawa')">
+                                    <div class="product-icon">🥣</div>
+                                    <div class="product-name">Rawa</div>
+                                    <div class="product-stock">Stock: 150 bags</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weight Selection -->
+                        <div class="product-section">
+                            <div class="section-title">Select Bag Weight</div>
+                            <div class="weight-grid" id="weight-grid">
+                                <div class="weight-card" onclick="selectWeight(this, '5')">5 KG</div>
+                                <div class="weight-card" onclick="selectWeight(this, '8')">8 KG</div>
+                                <div class="weight-card" onclick="selectWeight(this, '10')">10 KG</div>
+                                <div class="weight-card" onclick="selectWeight(this, '20')">20 KG</div>
+                                <div class="weight-card" onclick="selectWeight(this, '40')">40 KG</div>
+                                <div class="weight-card" onclick="selectWeight(this, '50')">50 KG</div>
+                            </div>
+                        </div>
+
+                        <!-- Add to Cart Button -->
+                        <button class="btn btn-primary btn-lg" onclick="addToCart()" id="add-to-cart-btn" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add to Bill
+                        </button>
+                    </div>
+
+                    <!-- Right Side: Cart Panel -->
+                    <div class="cart-panel">
+                        <div class="cart-header">
+                            <h3 class="cart-title">Current Bill</h3>
+                        </div>
+                        <div class="cart-items" id="cart-items">
+                            <!-- Cart items will be dynamically added here -->
+                            <div style="text-align: center; padding: var(--space-xl); color: var(--text-muted);">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: var(--space-md); opacity: 0.5;">
+                                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                                </svg>
+                                <p>No items added yet</p>
+                                <p style="font-size: 0.875rem; margin-top: var(--space-sm);">Select product and weight to add items</p>
+                            </div>
+                        </div>
+                        <div class="cart-summary">
+                            <div class="summary-row">
+                                <span>Subtotal</span>
+                                <span id="subtotal">₹0</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Tax (5%)</span>
+                                <span id="tax">₹0</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Grand Total</span>
+                                <span id="grand-total">₹0</span>
+                            </div>
+                        </div>
+                        <div class="cart-actions">
+                            <button class="btn btn-success btn-lg" onclick="saveBill()" id="save-bill-btn" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Save Bill
+                            </button>
+                            <button class="btn btn-secondary" onclick="printInvoice()" id="print-btn" disabled>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Print Invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 CUSTOMERS PAGE
+                 ============================================ -->
+            <div id="page-customers" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Customers</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('add-customer')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Customer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-search">
+                            <svg><use href="#icon-search"></use></svg>
+                            <input type="text" placeholder="Search customers...">
+                        </div>
+                        <select class="form-input" style="width: auto;">
+                            <option>All Customers</option>
+                            <option>With Balance</option>
+                            <option>Regular</option>
+                            <option>New</option>
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Phone</th>
+                                <th>Address</th>
+                                <th>Total Purchases</th>
+                                <th>Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Ramesh Stores</strong></td>
+                                <td>+91 98765 43210</td>
+                                <td>Nagpur, Maharashtra</td>
+                                <td>₹4,25,000</td>
+                                <td><span style="color: var(--danger); font-weight: 600;">₹45,000</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="viewCustomer('ramesh')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Suresh Kumar</strong></td>
+                                <td>+91 98765 12345</td>
+                                <td>Pune, Maharashtra</td>
+                                <td>₹2,80,000</td>
+                                <td><span style="color: var(--success); font-weight: 600;">₹0</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="viewCustomer('suresh')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Patel Grocery</strong></td>
+                                <td>+91 98765 67890</td>
+                                <td>Mumbai, Maharashtra</td>
+                                <td>₹6,50,000</td>
+                                <td><span style="color: var(--danger); font-weight: 600;">₹85,000</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="viewCustomer('patel')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Geeta Mills</strong></td>
+                                <td>+91 98765 11111</td>
+                                <td>Delhi, NCR</td>
+                                <td>₹8,20,000</td>
+                                <td><span style="color: var(--success); font-weight: 600;">₹0</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="viewCustomer('geeta')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sharma Traders</strong></td>
+                                <td>+91 98765 22222</td>
+                                <td>Jaipur, Rajasthan</td>
+                                <td>₹1,50,000</td>
+                                <td><span style="color: var(--warning); font-weight: 600;">₹15,000</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="viewCustomer('sharma')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 PRODUCTS PAGE
+                 ============================================ -->
+            <div id="page-products" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Products</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('add-product')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Product
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-search">
+                            <svg><use href="#icon-search"></use></svg>
+                            <input type="text" placeholder="Search products...">
+                        </div>
+                        <select class="form-input" style="width: auto;">
+                            <option>All Products</option>
+                            <option>In Stock</option>
+                            <option>Low Stock</option>
+                            <option>Out of Stock</option>
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Available Weights</th>
+                                <th>Current Stock</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">🌾</div>
+                                        <strong>Wheat Flour</strong>
+                                    </div>
+                                </td>
+                                <td>5kg, 10kg, 20kg, 50kg</td>
+                                <td>450 bags</td>
+                                <td><span class="badge-status badge-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="editProduct('wheat')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">🟡</div>
+                                        <strong>Besan</strong>
+                                    </div>
+                                </td>
+                                <td>5kg, 10kg, 20kg, 40kg</td>
+                                <td>320 bags</td>
+                                <td><span class="badge-status badge-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="editProduct('besan')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">⚪</div>
+                                        <strong>Maida</strong>
+                                    </div>
+                                </td>
+                                <td>5kg, 10kg, 20kg, 50kg</td>
+                                <td>280 bags</td>
+                                <td><span class="badge-status badge-warning">Low Stock</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="editProduct('maida')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">🟠</div>
+                                        <strong>Suji</strong>
+                                    </div>
+                                </td>
+                                <td>5kg, 10kg, 20kg</td>
+                                <td>190 bags</td>
+                                <td><span class="badge-status badge-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="editProduct('suji')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">🍞</div>
+                                        <strong>Atta</strong>
+                                    </div>
+                                </td>
+                                <td>5kg, 10kg, 20kg, 50kg</td>
+                                <td>520 bags</td>
+                                <td><span class="badge-status badge-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-icon" onclick="editProduct('atta')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 INVENTORY PAGE
+                 ============================================ -->
+            <div id="page-inventory" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Inventory Management</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('add-stock')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Stock
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-search">
+                            <svg><use href="#icon-search"></use></svg>
+                            <input type="text" placeholder="Search inventory...">
+                        </div>
+                        <div style="display: flex; gap: var(--space-md);">
+                            <select class="form-input" style="width: auto;">
+                                <option>All Products</option>
+                                <option>Wheat Flour</option>
+                                <option>Besan</option>
+                                <option>Maida</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="exportInventory()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Bag Weight</th>
+                                <th>Current Stock</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Wheat Flour</strong></td>
+                                <td>50 KG</td>
+                                <td>250 bags</td>
+                                <td>Today, 10:30 AM</td>
+                                <td>
+                                    <div style="display: flex; gap: var(--space-sm);">
+                                        <button class="qty-btn" onclick="adjustStock('wheat-50', 1)" title="Add">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                        <button class="qty-btn" onclick="adjustStock('wheat-50', -1)" title="Remove">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Wheat Flour</strong></td>
+                                <td>20 KG</td>
+                                <td>120 bags</td>
+                                <td>Yesterday, 4:15 PM</td>
+                                <td>
+                                    <div style="display: flex; gap: var(--space-sm);">
+                                        <button class="qty-btn" onclick="adjustStock('wheat-20', 1)" title="Add">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                        <button class="qty-btn" onclick="adjustStock('wheat-20', -1)" title="Remove">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Besan</strong></td>
+                                <td>40 KG</td>
+                                <td>180 bags</td>
+                                <td>Today, 9:00 AM</td>
+                                <td>
+                                    <div style="display: flex; gap: var(--space-sm);">
+                                        <button class="qty-btn" onclick="adjustStock('besan-40', 1)" title="Add">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                        <button class="qty-btn" onclick="adjustStock('besan-40', -1)" title="Remove">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Maida</strong></td>
+                                <td>50 KG</td>
+                                <td>85 bags</td>
+                                <td>2 days ago</td>
+                                <td>
+                                    <div style="display: flex; gap: var(--space-sm);">
+                                        <button class="qty-btn" onclick="adjustStock('maida-50', 1)" title="Add">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                        <button class="qty-btn" onclick="adjustStock('maida-50', -1)" title="Remove">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Suji</strong></td>
+                                <td>20 KG</td>
+                                <td>95 bags</td>
+                                <td>Yesterday, 11:30 AM</td>
+                                <td>
+                                    <div style="display: flex; gap: var(--space-sm);">
+                                        <button class="qty-btn" onclick="adjustStock('suji-20', 1)" title="Add">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                        <button class="qty-btn" onclick="adjustStock('suji-20', -1)" title="Remove">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 REPORTS PAGE
+                 ============================================ -->
+            <div id="page-reports" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Reports</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" onclick="exportReport()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Sales Reports -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Sales Overview</h3>
+                            <select class="form-input" style="width: auto;">
+                                <option>This Month</option>
+                                <option>Last Month</option>
+                                <option>This Quarter</option>
+                                <option>This Year</option>
+                            </select>
+                        </div>
+                        <div class="chart-placeholder">
+                            <div style="text-align: center;">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e0" stroke-width="1" style="margin-bottom: var(--space-md);">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                <p>Sales Analytics Chart</p>
+                                <p style="font-size: 0.875rem; margin-top: var(--space-sm);">Monthly sales performance</p>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin-top: var(--space-lg);">
+                            <div style="text-align: center; padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs);">Total Sales</div>
+                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--success);">₹12,45,000</div>
+                            </div>
+                            <div style="text-align: center; padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs);">Orders</div>
+                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">156</div>
+                            </div>
+                            <div style="text-align: center; padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs);">Avg. Order</div>
+                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--info);">₹7,980</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Products -->
+                    <div class="activity-list">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Top Selling Products</h3>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: var(--success-light); color: var(--success);">1</div>
+                            <div class="activity-content">
+                                <div class="activity-text"><strong>Wheat Flour (50kg)</strong></div>
+                                <div class="activity-time">420 bags sold</div>
+                            </div>
+                            <span style="font-weight: 700; color: var(--success);">₹5,25,000</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: var(--success-light); color: var(--success);">2</div>
+                            <div class="activity-content">
+                                <div class="activity-text"><strong>Besan (40kg)</strong></div>
+                                <div class="activity-time">280 bags sold</div>
+                            </div>
+                            <span style="font-weight: 700; color: var(--success);">₹3,36,000</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: var(--success-light); color: var(--success);">3</div>
+                            <div class="activity-content">
+                                <div class="activity-text"><strong>Maida (50kg)</strong></div>
+                                <div class="activity-time">195 bags sold</div>
+                            </div>
+                            <span style="font-weight: 700; color: var(--success);">₹2,53,500</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: var(--bg-tertiary); color: var(--text-muted);">4</div>
+                            <div class="activity-content">
+                                <div class="activity-text"><strong>Atta (50kg)</strong></div>
+                                <div class="activity-time">150 bags sold</div>
+                            </div>
+                            <span style="font-weight: 700; color: var(--text-secondary);">₹1,80,000</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: var(--bg-tertiary); color: var(--text-muted);">5</div>
+                            <div class="activity-content">
+                                <div class="activity-text"><strong>Suji (20kg)</strong></div>
+                                <div class="activity-time">120 bags sold</div>
+                            </div>
+                            <span style="font-weight: 700; color: var(--text-secondary);">₹96,000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Alerts -->
+                <div class="chart-container" style="margin-top: var(--space-xl);">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Inventory Alerts</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-md);">
+                        <div style="padding: var(--space-lg); background: var(--danger-light); border-radius: var(--radius-lg); border-left: 4px solid var(--danger);">
+                            <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-sm);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                                <strong style="color: var(--danger);">Low Stock Alert</strong>
+                            </div>
+                            <p style="font-size: 0.875rem; color: var(--text-secondary);">Maida (50kg) is running low. Only 85 bags remaining.</p>
+                        </div>
+                        <div style="padding: var(--space-lg); background: var(--warning-light); border-radius: var(--radius-lg); border-left: 4px solid var(--warning);">
+                            <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-sm);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <strong style="color: var(--warning);">Reorder Reminder</strong>
+                            </div>
+                            <p style="font-size: 0.875rem; color: var(--text-secondary);">Suji stock below threshold. Consider reordering soon.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 INVOICE PAGE (Printable)
+                 ============================================ -->
+            <div id="page-invoice" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Invoice Preview</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" onclick="window.print()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
+                            Print Invoice
+                        </button>
+                        <button class="btn btn-primary" onclick="downloadPDF()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="invoice-container">
+                    <div class="invoice-header">
+                        <div class="invoice-company">
+                            <h2>Geeta Flour Mills Pvt. Ltd.</h2>
+                            <p>123 Industrial Area, Phase II<br>Nagpur, Maharashtra - 440001<br>GSTIN: 27AABCG1234Z1ZP</p>
+                        </div>
+                        <div class="invoice-meta">
+                            <h3>TAX INVOICE</h3>
+                            <p><strong>Invoice #:</strong> INV-2024-00156<br>
+                            <strong>Date:</strong> March 9, 2024<br>
+                            <strong>Due Date:</strong> March 23, 2024</p>
+                        </div>
+                    </div>
+
+                    <div class="invoice-details">
+                        <div class="invoice-section">
+                            <h4>Bill To:</h4>
+                            <p><strong>Ramesh Stores</strong><br>
+                            456 Market Road<br>
+                            Nagpur, Maharashtra - 440002<br>
+                            Phone: +91 98765 43210<br>
+                            GSTIN: 27AABCR5678Y2ZP</p>
+                        </div>
+                        <div class="invoice-section">
+                            <h4>Ship To:</h4>
+                            <p><strong>Ramesh Stores</strong><br>
+                            456 Market Road<br>
+                            Nagpur, Maharashtra - 440002</p>
+                        </div>
+                    </div>
+
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Product</th>
+                                <th>Weight</th>
+                                <th>Qty</th>
+                                <th>Rate</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Wheat Flour</td>
+                                <td>50 KG</td>
+                                <td>10</td>
+                                <td>₹1,250</td>
+                                <td>₹12,500</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Besan</td>
+                                <td>40 KG</td>
+                                <td>5</td>
+                                <td>₹1,200</td>
+                                <td>₹6,000</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Maida</td>
+                                <td>50 KG</td>
+                                <td>3</td>
+                                <td>₹1,300</td>
+                                <td>₹3,900</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="invoice-totals">
+                        <table class="totals-table">
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td style="text-align: right;">₹22,400</td>
+                            </tr>
+                            <tr>
+                                <td>CGST (2.5%):</td>
+                                <td style="text-align: right;">₹560</td>
+                            </tr>
+                            <tr>
+                                <td>SGST (2.5%):</td>
+                                <td style="text-align: right;">₹560</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td>Grand Total:</td>
+                                <td style="text-align: right;">₹23,520</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="invoice-footer">
+                        <div>
+                            <h4>Terms & Conditions:</h4>
+                            <p style="font-size: 0.875rem; color: var(--text-muted);">
+                                1. Payment due within 14 days<br>
+                                2. Goods once sold cannot be returned<br>
+                                3. Interest @18% p.a. on delayed payment
+                            </p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div class="signature-area"></div>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-sm);">Authorized Signature</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================
+                 SETTINGS PAGE (Admin Only)
+                 ============================================ -->
+            <div id="page-settings" class="page-content hidden">
+                <div class="page-header">
+                    <h1 class="page-title">Settings</h1>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: var(--space-xl);">
+                    <!-- Company Settings -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: var(--space-md);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                Company Information
+                            </h3>
+                            <div class="form-group">
+                                <label class="form-label">Company Name</label>
+                                <input type="text" class="form-input" value="Geeta Flour Mills Pvt. Ltd.">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-input" rows="3">123 Industrial Area, Phase II
+Nagpur, Maharashtra - 440001</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">GSTIN</label>
+                                <input type="text" class="form-input" value="27AABCG1234Z1ZP">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-input" value="+91 712 1234567">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
+                        </div>
+                    </div>
+
+                    <!-- User Management -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: var(--space-md);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                User Management
+                            </h3>
+                            <div style="margin-bottom: var(--space-lg);">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: var(--space-sm);">
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600;">AD</div>
+                                        <div>
+                                            <div style="font-weight: 600;">Admin User</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">admin@geetamills.com</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status badge-success">Admin</span>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: var(--space-sm);">
+                                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                        <div style="width: 40px; height: 40px; background: var(--info); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600;">JD</div>
+                                        <div>
+                                            <div style="font-weight: 600;">John Doe</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">accountant@geetamills.com</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status badge-warning">Manager</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="openModal('add-user')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add User
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Backup & Data -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: var(--space-md);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Backup & Export
+                            </h3>
+                            <p style="color: var(--text-muted); margin-bottom: var(--space-lg);">Last backup: Today, 6:00 AM</p>
+                            <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+                                <button class="btn btn-secondary" onclick="exportDatabase()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Export Database
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportToExcel()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                    Export to Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ============================================
+             MOBILE BOTTOM NAVIGATION
+             ============================================ -->
+        <nav class="mobile-nav">
+            <div class="mobile-nav-items">
+                <a href="#" class="mobile-nav-item active" onclick="showPage('dashboard')">
+                    <svg><use href="#icon-dashboard"></use></svg>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="mobile-nav-item" onclick="showPage('sales')">
+                    <svg><use href="#icon-sales"></use></svg>
+                    <span>Sales</span>
+                </a>
+                <a href="#" class="mobile-nav-item" onclick="showPage('customers')">
+                    <svg><use href="#icon-customers"></use></svg>
+                    <span>Customers</span>
+                </a>
+                <a href="#" class="mobile-nav-item" onclick="showPage('inventory')">
+                    <svg><use href="#icon-inventory"></use></svg>
+                    <span>Stock</span>
+                </a>
+                <a href="#" class="mobile-nav-item" onclick="showPage('reports')">
+                    <svg><use href="#icon-more"></use></svg>
+                    <span>More</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- ============================================
+         MODALS
+         ============================================ -->
+
+    <!-- Add Customer Modal -->
+    <div class="modal-overlay" id="modal-add-customer">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Customer</h3>
+                <button class="modal-close" onclick="closeModal('add-customer')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Customer Name *</label>
+                    <input type="text" class="form-input" placeholder="Enter customer name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number *</label>
+                    <input type="tel" class="form-input" placeholder="+91 98765 43210" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" placeholder="customer@email.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-input" rows="3" placeholder="Full address..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">GSTIN (if applicable)</label>
+                    <input type="text" class="form-input" placeholder="27AABCU9603R1ZX">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('add-customer')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal-overlay" id="modal-add-product">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Product</h3>
+                <button class="modal-close" onclick="closeModal('add-product')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Product Name *</label>
+                    <input type="text" class="form-input" placeholder="e.g., Wheat Flour" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Weights (kg) *</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                        <label style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); background: var(--bg-secondary); border-radius: var(--radius-md); cursor: pointer;">
+                            <input type="checkbox" checked> 5kg
+                        </label>
+                        <label style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); background: var(--bg-secondary); border-radius: var(--radius-md); cursor: pointer;">
+                            <input type="checkbox" checked> 10kg
+                        </label>
+                        <label style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); background: var(--bg-secondary); border-radius: var(--radius-md); cursor: pointer;">
+                            <input type="checkbox" checked> 20kg
+                        </label>
+                        <label style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); background: var(--bg-secondary); border-radius: var(--radius-md); cursor: pointer;">
+                            <input type="checkbox"> 40kg
+                        </label>
+                        <label style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); background: var(--bg-secondary); border-radius: var(--radius-md); cursor: pointer;">
+                            <input type="checkbox" checked> 50kg
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" rows="2" placeholder="Product description..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('add-product')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Stock Modal -->
+    <div class="modal-overlay" id="modal-add-stock">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Stock</h3>
+                <button class="modal-close" onclick="closeModal('add-stock')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Product *</label>
+                    <select class="form-input" required>
+                        <option value="">Select product...</option>
+                        <option>Wheat Flour</option>
+                        <option>Besan</option>
+                        <option>Maida</option>
+                        <option>Suji</option>
+                        <option>Atta</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bag Weight *</label>
+                    <select class="form-input" required>
+                        <option value="">Select weight...</option>
+                        <option>5 KG</option>
+                        <option>10 KG</option>
+                        <option>20 KG</option>
+                        <option>40 KG</option>
+                        <option>50 KG</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantity *</label>
+                    <input type="number" class="form-input" placeholder="Number of bags" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" value="2024-03-09">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('add-stock')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStock()">Add Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="modal-add-user">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New User</h3>
+                <button class="modal-close" onclick="closeModal('add-user')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" class="form-input" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-input" placeholder="user@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role *</label>
+                    <select class="form-input" required>
+                        <option value="">Select role...</option>
+                        <option value="admin">Admin (Full Access)</option>
+                        <option value="manager">Manager (Sales & Reports)</option>
+                        <option value="accountant">Accountant (Billing Only)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password *</label>
+                    <input type="password" class="form-input" placeholder="Set password" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('add-user')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveUser()">Add User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ============================================
+         JAVASCRIPT
+         ============================================ -->
+    <script>
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        let currentPage = 'login';
+        let cart = [];
+        let selectedProduct = null;
+        let selectedWeight = null;
+        let selectedCustomer = null;
+
+        // ============================================
+        // NAVIGATION & PAGE MANAGEMENT
+        // ============================================
+        function handleLogin(event) {
+            event.preventDefault();
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('app-shell').classList.remove('hidden');
+            showPage('dashboard');
+            showToast('Welcome back, John Doe!', 'success');
+        }
+
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            // Show selected page
+            const targetPage = document.getElementById(`page-${pageName}`);
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+                currentPage = pageName;
+            }
+
+            // Update navigation active states
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.page === pageName) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update mobile nav
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Close sidebar on mobile after navigation
+            if (window.innerWidth <= 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // ============================================
+        // MODAL MANAGEMENT
+        // ============================================
+        function openModal(modalId) {
+            const modal = document.getElementById(`modal-${modalId}`);
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(`modal-${modalId}`);
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // SALES / BILLING FUNCTIONS
+        // ============================================
+        function selectProduct(element, productName) {
+            // Remove previous selection
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selection to clicked card
+            element.classList.add('selected');
+            selectedProduct = productName;
+
+            checkCanAddToCart();
+        }
+
+        function selectWeight(element, weight) {
+            // Remove previous selection
+            document.querySelectorAll('.weight-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selection to clicked card
+            element.classList.add('selected');
+            selectedWeight = weight;
+
+            checkCanAddToCart();
+        }
+
+        function checkCanAddToCart() {
+            const btn = document.getElementById('add-to-cart-btn');
+            if (selectedProduct && selectedWeight) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        }
+
+        function addToCart() {
+            if (!selectedProduct || !selectedWeight) return;
+
+            // Check if item already exists in cart
+            const existingItem = cart.find(item => 
+                item.product === selectedProduct && item.weight === selectedWeight
+            );
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                // Calculate price based on weight (simplified logic)
+                const basePrice = selectedProduct === 'Besan' ? 1200 : 
+                                 selectedProduct === 'Maida' ? 1300 : 1250;
+                const weightMultiplier = parseInt(selectedWeight) / 50;
+                const price = Math.round(basePrice * weightMultiplier);
+
+                cart.push({
+                    id: Date.now(),
+                    product: selectedProduct,
+                    weight: selectedWeight,
+                    quantity: 1,
+                    price: price,
+                    total: price
+                });
+            }
+
+            updateCartUI();
+
+            // Reset selections
+            document.querySelectorAll('.product-card, .weight-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            selectedProduct = null;
+            selectedWeight = null;
+            document.getElementById('add-to-cart-btn').disabled = true;
+
+            showToast('Item added to bill', 'success');
+        }
+
+        function updateCartUI() {
+            const cartContainer = document.getElementById('cart-items');
+
+            if (cart.length === 0) {
+                cartContainer.innerHTML = `
+                    <div style="text-align: center; padding: var(--space-xl); color: var(--text-muted);">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: var(--space-md); opacity: 0.5;">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        <p>No items added yet</p>
+                        <p style="font-size: 0.875rem; margin-top: var(--space-sm);">Select product and weight to add items</p>
+                    </div>
+                `;
+                document.getElementById('save-bill-btn').disabled = true;
+                document.getElementById('print-btn').disabled = true;
+            } else {
+                cartContainer.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.product}</div>
+                            <div class="cart-item-details">${item.weight} KG × ₹${item.price}</div>
+                        </div>
+                        <div class="cart-item-qty">
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
+                            <span class="qty-value">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <span class="cart-item-price">₹${item.total}</span>
+                            <button class="cart-item-remove" onclick="removeFromCart(${item.id})">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('save-bill-btn').disabled = false;
+                document.getElementById('print-btn').disabled = false;
+            }
+
+            updateTotals();
+        }
+
+        function updateQuantity(itemId, change) {
+            const item = cart.find(i => i.id === itemId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(itemId);
+                } else {
+                    item.total = item.quantity * item.price;
+                    updateCartUI();
+                }
+            }
+        }
+
+        function removeFromCart(itemId) {
+            cart = cart.filter(item => item.id !== itemId);
+            updateCartUI();
+            showToast('Item removed', 'warning');
+        }
+
+        function clearCart() {
+            if (cart.length === 0) return;
+
+            if (confirm('Are you sure you want to clear all items?')) {
+                cart = [];
+                updateCartUI();
+                showToast('Cart cleared', 'warning');
+            }
+        }
+
+        function updateTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+            const tax = Math.round(subtotal * 0.05);
+            const grandTotal = subtotal + tax;
+
+            document.getElementById('subtotal').textContent = `₹${subtotal.toLocaleString()}`;
+            document.getElementById('tax').textContent = `₹${tax.toLocaleString()}`;
+            document.getElementById('grand-total').textContent = `₹${grandTotal.toLocaleString()}`;
+        }
+
+        function saveBill() {
+            if (cart.length === 0) {
+                showToast('Please add items to the bill', 'error');
+                return;
+            }
+
+            if (!selectedCustomer) {
+                showToast('Please select a customer', 'error');
+                return;
+            }
+
+            showToast('Bill saved successfully!', 'success');
+
+            // Show invoice page after short delay
+            setTimeout(() => {
+                showPage('invoice');
+            }, 500);
+        }
+
+        function printInvoice() {
+            window.print();
+        }
+
+        function toggleCustomerDropdown() {
+            // Simplified customer selection - in real app would show dropdown
+            const customers = ['Ramesh Stores', 'Suresh Kumar', 'Patel Grocery', 'Geeta Mills'];
+            const current = document.getElementById('selected-customer').textContent;
+            const currentIndex = customers.indexOf(current);
+            const nextIndex = (currentIndex + 1) % customers.length;
+
+            selectedCustomer = customers[nextIndex];
+            document.getElementById('selected-customer').textContent = selectedCustomer;
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--warning)'}" stroke-width="2">
+                    ${type === 'success' 
+                        ? '<polyline points="20 6 9 17 4 12"></polyline>' 
+                        : type === 'error'
+                        ? '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>'
+                        : '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>'
+                    }
+                </svg>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function refreshDashboard() {
+            showToast('Dashboard refreshed', 'success');
+        }
+
+        function viewCustomer(customerId) {
+            showToast(`Viewing customer: ${customerId}`, 'success');
+        }
+
+        function editProduct(productId) {
+            openModal('add-product');
+        }
+
+        function adjustStock(itemId, change) {
+            const action = change > 0 ? 'added' : 'removed';
+            showToast(`Stock ${action} successfully`, 'success');
+        }
+
+        function exportInventory() {
+            showToast('Inventory exported to Excel', 'success');
+        }
+
+        function exportReport() {
+            showToast('Report exported', 'success');
+        }
+
+        function downloadPDF() {
+            showToast('PDF downloaded', 'success');
+        }
+
+        function saveSettings() {
+            showToast('Settings saved successfully', 'success');
+        }
+
+        function exportDatabase() {
+            showToast('Database backup started...', 'success');
+        }
+
+        function exportToExcel() {
+            showToast('Data exported to Excel', 'success');
+        }
+
+        function saveCustomer() {
+            closeModal('add-customer');
+            showToast('Customer added successfully', 'success');
+        }
+
+        function saveProduct() {
+            closeModal('add-product');
+            showToast('Product added successfully', 'success');
+        }
+
+        function saveStock() {
+            closeModal('add-stock');
+            showToast('Stock added successfully', 'success');
+        }
+
+        function saveUser() {
+            closeModal('add-user');
+            showToast('User added successfully', 'success');
+        }
+
+        function showNotifications() {
+            showToast('3 new notifications', 'info');
+        }
+
+        function toggleUserMenu() {
+            // Would show dropdown in real implementation
+            showToast('User menu clicked', 'info');
+        }
+
+        // ============================================
+        // KEYBOARD SHORTCUTS
+        // ============================================
+        document.addEventListener('keydown', function(e) {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+
+            // Quick navigation shortcuts
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        showPage('dashboard');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        showPage('sales');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        showPage('customers');
+                        break;
+                }
+            }
+        });
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date for date inputs
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                if (!input.value) input.value = today;
+            });
+        });
+    </script>
+</body>
+</html>
