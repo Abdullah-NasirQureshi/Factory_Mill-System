@@ -29,7 +29,6 @@ build/
 Thumbs.db
 
 # Database
-*.sql
 *.sqlite
 *.db
 

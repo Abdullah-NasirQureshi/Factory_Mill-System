@@ -246,6 +246,7 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 4. WHEN viewing supplier details, THE System SHALL display supplier information, purchase history, and total outstanding payable amount
 5. WHEN displaying supplier purchase history, THE System SHALL show purchase date, product details, total amount, paid amount, and remaining balance
 
+
 ### Requirement 19
 
 **User Story:** As an accountant, I want to record payments to suppliers with flexible payment methods, so that I can track money paid out and reduce supplier payable balances.
@@ -317,3 +318,75 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 3. WHEN an invoice is generated for a supplier, THE System SHALL display all purchases with their payment status and the supplier's total outstanding payable
 4. WHEN displaying payment information on an invoice, THE System SHALL show payment date, payment method, and bank name if applicable
 5. WHEN a sale has multiple partial payments, THE System SHALL list all payments with dates and amounts on the invoice
+
+### Requirement 25
+
+**User Story:** As an accountant, I want to generate and print purchase invoices for completed supplier purchases, so that I can maintain official records of goods received and amounts owed.
+
+#### Acceptance Criteria
+
+1. WHEN a purchase is recorded, THE System SHALL generate a unique Purchase Invoice number for that transaction using the format PI-XXXXX, scoped per factory
+2. WHEN a purchase invoice is viewed, THE System SHALL display company information, supplier details, purchase date, and an itemized list of purchased products with quantities, unit prices, and line totals
+3. WHEN a purchase invoice is printed, THE System SHALL format the document with company logo, address, phone number, and custom footer text retrieved from factory settings
+4. WHEN displaying purchase items on an invoice, THE System SHALL show product name, bag weight if applicable, quantity, unit price, and line total
+5. WHEN calculating purchase invoice totals, THE System SHALL sum all line item totals and display the grand total, amount paid, and remaining balance if the purchase is partially paid
+
+### Requirement 26
+
+**User Story:** As an accountant, I want to generate and print financial vouchers for all payment and adjustment transactions, so that I have official printable records for every financial movement.
+
+#### Acceptance Criteria
+
+1. WHEN a customer payment is recorded, THE System SHALL generate a unique Payment Voucher number using the format PV-XXXXX, scoped per factory
+2. WHEN a supplier payment is recorded, THE System SHALL generate a unique Payment Voucher number using the format PV-XXXXX, scoped per factory
+3. WHEN a cash or bank balance adjustment is recorded, THE System SHALL generate a unique Adjustment Voucher number using the format JV-XXXXX, scoped per factory
+4. WHEN a voucher is viewed, THE System SHALL display voucher number, transaction type, source reference (customer name or supplier name or adjustment description), payment method, bank name if applicable, amount, date and time, and optional notes
+5. WHEN a voucher is printed, THE System SHALL format the document with company logo, factory name, address, and footer text retrieved from factory settings
+
+### Requirement 27
+
+**User Story:** As an accountant, I want the system to offer print, PDF download, and skip options immediately after completing any transaction, so that I can handle document printing flexibly based on the situation.
+
+#### Acceptance Criteria
+
+1. WHEN a sale is saved, THE System SHALL present the user with options to print the Sales Invoice immediately, download it as a PDF, or skip and handle it later
+2. WHEN a purchase is recorded, THE System SHALL present the user with options to print the Purchase Invoice immediately, download it as a PDF, or skip and handle it later
+3. WHEN a customer or supplier payment is recorded, THE System SHALL present the user with options to print the Payment Voucher immediately, download it as a PDF, or skip and handle it later
+4. WHEN a cash or bank balance adjustment is recorded, THE System SHALL present the user with options to print the Adjustment Voucher immediately, download it as a PDF, or skip and handle it later
+5. WHEN the user selects skip, THE System SHALL save the transaction normally without printing and allow the document to be accessed and printed later from the transaction record
+
+### Requirement 28
+
+**User Story:** As an accountant, I want to view and reprint any invoice or voucher from the transaction history at any time, so that I can retrieve documents for previously completed transactions without needing to redo them.
+
+#### Acceptance Criteria
+
+1. WHEN a user navigates to a sale record, THE System SHALL provide an option to view and print the associated Sales Invoice or download it as a PDF
+2. WHEN a user navigates to a purchase record, THE System SHALL provide an option to view and print the associated Purchase Invoice or download it as a PDF
+3. WHEN a user navigates to a payment transaction in the ledger, THE System SHALL provide an option to view and print the associated Payment Voucher or download it as a PDF
+4. WHEN a user navigates to an adjustment transaction in the ledger, THE System SHALL provide an option to view and print the associated Adjustment Voucher or download it as a PDF
+5. WHEN a document is regenerated for reprinting, THE System SHALL dynamically reconstruct the invoice or voucher from stored transaction data rather than retrieving a previously saved document file
+
+### Requirement 29
+
+**User Story:** As an admin, I want all printable documents to have unique auto-generated document numbers scoped per factory, so that every invoice and voucher can be uniquely identified and referenced.
+
+#### Acceptance Criteria
+
+1. WHEN a sale is saved, THE System SHALL auto-generate a Sales Invoice number in the format SI-XXXXX, incrementing sequentially per factory
+2. WHEN a purchase is recorded, THE System SHALL auto-generate a Purchase Invoice number in the format PI-XXXXX, incrementing sequentially per factory
+3. WHEN a customer or supplier payment is recorded, THE System SHALL auto-generate a Payment Voucher number in the format PV-XXXXX, incrementing sequentially per factory
+4. WHEN a cash or bank balance adjustment is recorded, THE System SHALL auto-generate an Adjustment Voucher number in the format JV-XXXXX, incrementing sequentially per factory
+5. WHEN multiple factories exist, THE System SHALL maintain independent document number sequences for each factory so that document numbers do not conflict across factories
+
+### Requirement 30
+
+**User Story:** As a system architect, I want invoices and vouchers to be generated dynamically from stored transaction data rather than saved as static files, so that the system remains efficient, storage-friendly, and capable of reprinting documents at any time.
+
+#### Acceptance Criteria
+
+1. WHEN any invoice or voucher is requested for viewing or printing, THE System SHALL generate the document dynamically by reading the associated transaction, sale, purchase, or payment data from the database
+2. WHEN transaction data is updated or corrected before finalization, THE System SHALL reflect the latest data when the document is next generated
+3. WHEN a reverted transaction's document is requested, THE System SHALL clearly indicate the reverted status on the regenerated document
+4. WHEN generating documents, THE System SHALL NOT store full invoice or voucher content as static files in the database, storing only the structured transaction data required for reconstruction
+5. WHEN a document is downloaded as a PDF, THE System SHALL generate the PDF on demand from current transaction data and deliver it to the user without persisting the PDF file on the server
