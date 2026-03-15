@@ -31,13 +31,10 @@ export default function DashboardPage() {
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
   if (!data) return <div className="page-header"><h1 className="page-title">Dashboard</h1><p>Failed to load data.</p></div>;
 
-  const today = { sales_amount: data.today?.sales, sales_count: data.today?.bills };
-  const totals = { customer_dues: data.total_dues, supplier_payables: data.total_payables };
-  const cash = { balance: data.cash_balance };
+  const today = data.today || {};
   const banks = data.bank_balances || [];
   const lowStock = data.low_stock || [];
   const recentSales = data.recent_sales || [];
-  const recentPayments = [];
 
   return (
     <div>
@@ -50,12 +47,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="stats-grid">
-        <StatCard label="Today's Sales" value={`Rs ${fmt(today.sales_amount)}`} sub={`${today.sales_count || 0} bills`} />
-        <StatCard label="Customer Dues" value={`Rs ${fmt(totals.customer_dues)}`} color="var(--danger)" />
-        <StatCard label="Supplier Payables" value={`Rs ${fmt(totals.supplier_payables)}`} color="var(--warning)" />
-        <StatCard label="Cash Balance" value={`Rs ${fmt(cash.balance)}`} />
+        <StatCard label="Today's Sales" value={`Rs ${fmt(today.sales)}`} sub={`${today.bills || 0} bills`} />
+        <StatCard label="Customer Dues" value={`Rs ${fmt(data.total_dues)}`} color="var(--danger)" />
+        <StatCard label="Supplier Payables" value={`Rs ${fmt(data.total_payables)}`} color="var(--warning)" />
+        <StatCard label="Cash Balance" value={`Rs ${fmt(data.cash_balance)}`} />
         {banks.map(b => (
-          <StatCard key={b.id} label={b.bank_name} value={`Rs ${fmt(b.balance)}`} sub={b.account_number} />
+          <StatCard key={b.id} label={b.bank_name} value={`Rs ${fmt(b.balance)}`} />
         ))}
       </div>
 
@@ -68,7 +65,7 @@ export default function DashboardPage() {
           </div>
           <div className="card-body" style={{ padding: 0 }}>
             <table className="table">
-              <thead><tr><th>Invoice</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Invoice</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead>
               <tbody>
                 {recentSales.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No sales yet</td></tr>}
                 {recentSales.map(s => (
@@ -76,31 +73,7 @@ export default function DashboardPage() {
                     <td><span className="badge badge-info">{s.invoice_number}</span></td>
                     <td>{s.customer_name}</td>
                     <td>Rs {fmt(s.total_amount)}</td>
-                    <td><span className={`badge ${s.payment_status === 'PAID' ? 'badge-success' : s.payment_status === 'PARTIAL' ? 'badge-warning' : 'badge-danger'}`}>{s.payment_status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Recent Payments */}
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Recent Payments</span>
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/payments')}>View All</button>
-          </div>
-          <div className="card-body" style={{ padding: 0 }}>
-            <table className="table">
-              <thead><tr><th>Voucher</th><th>Party</th><th>Amount</th><th>Method</th></tr></thead>
-              <tbody>
-                {recentPayments.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No payments yet</td></tr>}
-                {recentPayments.map(p => (
-                  <tr key={p.id}>
-                    <td><span className="badge badge-info">{p.voucher_number}</span></td>
-                    <td>{p.party_name}</td>
-                    <td>Rs {fmt(p.amount)}</td>
-                    <td><span className="badge badge-secondary">{p.payment_method}</span></td>
+                    <td>{new Date(s.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
