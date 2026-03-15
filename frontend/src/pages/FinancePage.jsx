@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 function fmt(n) { return Number(n || 0).toLocaleString(); }
 
@@ -15,6 +16,7 @@ export default function FinancePage() {
   const [cashEdit, setCashEdit] = useState(false);
   const [newCash, setNewCash] = useState('');
   const toast = useToast();
+  const { user } = useAuth();
 
   const load = () => {
     Promise.all([api.get('/cash'), api.get('/banks')])
@@ -46,7 +48,7 @@ export default function FinancePage() {
   };
 
   const handleBankDelete = async (id) => {
-    if (!confirm('Delete this bank account?')) return;
+    if (!confirm('Delete this bank account? This will fail if the account has a non-zero balance or associated transactions.')) return;
     try {
       await api.delete(`/banks/${id}`);
       toast('Bank account deleted', 'success'); load();
@@ -59,14 +61,18 @@ export default function FinancePage() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Finance</h1>
-        <button className="btn btn-primary" onClick={openBankAdd}>+ Add Bank Account</button>
+        {user?.role === 'ADMIN' && (
+          <button className="btn btn-primary" onClick={openBankAdd}>+ Add Bank Account</button>
+        )}
       </div>
 
       {/* Cash */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
           <span className="card-title">Cash Account</span>
-          {!cashEdit && <button className="btn btn-secondary btn-sm" onClick={() => { setNewCash(cash?.balance || 0); setCashEdit(true); }}>Set Balance</button>}
+          {!cashEdit && user?.role === 'ADMIN' && (
+            <button className="btn btn-secondary btn-sm" onClick={() => { setNewCash(cash?.balance || 0); setCashEdit(true); }}>Set Balance</button>
+          )}
         </div>
         <div className="card-body">
           {cashEdit ? (
@@ -96,8 +102,12 @@ export default function FinancePage() {
                   <td>{b.account_title || '—'}</td>
                   <td>Rs {fmt(b.balance)}</td>
                   <td style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-secondary btn-sm" onClick={() => openBankEdit(b)}>Edit</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleBankDelete(b.id)}>Delete</button>
+                    {user?.role === 'ADMIN' && (
+                      <>
+                        <button className="btn btn-secondary btn-sm" onClick={() => openBankEdit(b)}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleBankDelete(b.id)}>Delete</button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

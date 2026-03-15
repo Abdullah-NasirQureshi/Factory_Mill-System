@@ -25,7 +25,7 @@ export default function SupplierDetailPage() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm('Delete this supplier?')) return;
+    if (!confirm('Delete this supplier? This will fail if they have active purchases or outstanding payables.')) return;
     setDeleting(true);
     try {
       await api.delete(`/suppliers/${id}`);

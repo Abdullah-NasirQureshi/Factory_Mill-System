@@ -25,7 +25,7 @@ export default function CustomerDetailPage() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm('Delete this customer? This cannot be undone.')) return;
+    if (!confirm('Delete this customer? This will fail if they have active sales or an outstanding balance.')) return;
     setDeleting(true);
     try {
       await api.delete(`/customers/${id}`);
