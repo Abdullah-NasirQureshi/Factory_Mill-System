@@ -49,7 +49,11 @@ const updateSettings = async (req, res) => {
     await db.query(`UPDATE factories SET ${fSet} WHERE id = ?`, [...Object.values(fFields), factory_id]);
   }
 
-  return ok(res, { message: 'Settings updated' });
+  const [updated] = await db.query(
+    'SELECT s.*, f.name AS factory_name FROM settings s JOIN factories f ON s.factory_id = f.id WHERE s.factory_id = ?',
+    [factory_id]
+  );
+  return ok(res, { settings: updated[0] });
 };
 
 module.exports = { getSettings, updateSettings };
