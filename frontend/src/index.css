@@ -453,3 +453,55 @@ select.form-input { cursor: pointer; }
 .user-name { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
 .user-role { font-size: 0.75rem; color: var(--text-muted); }
 @media (max-width: 480px) { .user-info { display: none; } }
+
+/* ============================================
+   MOBILE RESPONSIVENESS POLISH (Task 30)
+   ============================================ */
+
+/* Table scroll wrapper — applied to card-body containing tables */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Ensure all tables inside cards scroll on small screens */
+.card .table { min-width: 500px; }
+
+@media (max-width: 768px) {
+  /* Tables */
+  .card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table { min-width: 480px; }
+
+  /* Page header stacks on mobile */
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header > div:last-child, .page-header > button { align-self: flex-start; }
+
+  /* Modal full-width on mobile */
+  .modal { max-width: 100%; margin: var(--space-md); border-radius: var(--radius-lg); }
+  .modal-overlay { padding: var(--space-sm); align-items: flex-end; }
+
+  /* Billing layout */
+  .billing-container { height: auto; gap: var(--space-md); }
+  .cart-panel { min-height: 400px; }
+
+  /* Stats */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Dashboard grid */
+  .dashboard-grid { grid-template-columns: 1fr; }
+
+  /* Product/weight grids */
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+  .weight-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Form inputs touch-friendly */
+  .form-input, .form-select { font-size: 16px; } /* prevents iOS zoom */
+
+  /* Buttons in header wrap */
+  .page-header .btn { min-height: 40px; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-sm); }
+  .weight-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-title { font-size: 1.25rem; }
+  .main-content { padding: var(--space-sm); }
+}
