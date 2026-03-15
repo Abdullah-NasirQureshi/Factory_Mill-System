@@ -15,6 +15,11 @@ Key capabilities include:
 - Cash flow tracking
 - Central transaction ledger for financial audit trails
 - Comprehensive reporting for business insights
+- Purchase invoice generation for supplier transactions
+- Financial vouchers for all payment and adjustment transactions
+- Flexible print-now, print-later, and PDF download workflow
+- Auto-generated document numbering (SI, PI, PV, JV) scoped per factory
+- Dynamic document generation from stored transaction data (no static file storage)
 
 ## Architecture
 
@@ -118,7 +123,8 @@ Example API endpoints:
 - WeightCardGrid: Grid of large clickable weight cards
 - BillItemsList: Cart-style display of items added to current bill
 - PaymentForm: Interface for entering payment amount and method
-- InvoiceView: Printable invoice display
+- SalesInvoiceView: Printable sales invoice display (SI-XXXXX)
+- DocumentActionModal: Post-transaction modal offering Print Now, Download PDF, or Skip options
 
 **Customer Management Module**
 - CustomerListPage: Searchable list of all customers
@@ -131,6 +137,7 @@ Example API endpoints:
 - SupplierDetailPage: Detailed view with purchase history and payables
 - SupplierForm: Add/edit supplier information
 - PurchaseForm: Record new purchase from supplier
+- PurchaseInvoiceView: Printable purchase invoice display (PI-XXXXX)
 
 **Inventory Module**
 - InventoryListPage: Display of all product-weight combinations with quantities
@@ -142,12 +149,14 @@ Example API endpoints:
 - SupplierPaymentForm: Record payments made to suppliers
 - PaymentMethodSelector: Choose between CASH, BANK, or NONE
 - BankAccountSelector: Dropdown for selecting bank account
+- PaymentVoucherView: Printable payment voucher display (PV-XXXXX)
 
 **Financial Management Module**
 - CashAccountDisplay: Show current cash balance
 - BankAccountList: Display all bank accounts with balances
 - BankAccountForm: Add/edit bank account (admin only)
 - TransactionLedger: Display all financial transactions with filters
+- AdjustmentVoucherView: Printable adjustment voucher display (JV-XXXXX)
 
 **Reports Module**
 - SalesReportPage: Daily/monthly sales reports
@@ -202,17 +211,23 @@ Example API endpoints:
 - `POST /api/sales` - Create new sale with items and payment
 - `GET /api/sales` - List all sales for factory
 - `GET /api/sales/:id` - Get sale details with items
+- `GET /api/sales/:id/invoice` - Generate sales invoice data (SI-XXXXX)
+- `GET /api/sales/:id/invoice/pdf` - Download sales invoice as PDF
 - `POST /api/sales/:id/revert` - Revert a sale (accountant)
 
 **Purchase APIs**
 - `POST /api/purchases` - Record new purchase from supplier
 - `GET /api/purchases` - List all purchases for factory
 - `GET /api/purchases/:id` - Get purchase details with items
+- `GET /api/purchases/:id/invoice` - Generate purchase invoice data (PI-XXXXX)
+- `GET /api/purchases/:id/invoice/pdf` - Download purchase invoice as PDF
 
 **Payment APIs**
 - `POST /api/payments/customer` - Record customer payment
 - `POST /api/payments/supplier` - Record supplier payment
 - `GET /api/payments` - List all payments for factory
+- `GET /api/payments/:id/voucher` - Generate payment voucher data (PV-XXXXX)
+- `GET /api/payments/:id/voucher/pdf` - Download payment voucher as PDF
 - `POST /api/payments/:id/revert` - Revert a payment (accountant)
 
 **Bank Account APIs**
@@ -229,6 +244,8 @@ Example API endpoints:
 **Transaction APIs**
 - `GET /api/transactions` - List all transactions with filters
 - `GET /api/transactions/:id` - Get transaction details
+- `GET /api/transactions/:id/voucher` - Generate adjustment voucher data (JV-XXXXX)
+- `GET /api/transactions/:id/voucher/pdf` - Download adjustment voucher as PDF
 
 **Report APIs**
 - `GET /api/reports/sales/daily` - Daily sales report
@@ -378,9 +395,9 @@ sales
 └── created_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 ```
 
-Invoice Number Format: `INV-{YEAR}-{SEQUENCE}`
-Example: INV-2026-0001, INV-2026-0002
-Sequence resets every year per factory.
+Sales Invoice Number Format: `SI-{5-digit sequence}`
+Example: SI-00001, SI-00002
+Sequence is per factory and increments globally (does not reset yearly).
 
 ### SaleItems
 
@@ -406,6 +423,7 @@ purchases
 ├── id (PK, INT, AUTO_INCREMENT)
 ├── factory_id (FK -> factories.id, INT, NOT NULL)
 ├── supplier_id (FK -> suppliers.id, INT, NOT NULL)
+├── invoice_number (VARCHAR(50), UNIQUE, NOT NULL)  -- PI-XXXXX format
 ├── total_amount (DECIMAL(10,2), NOT NULL)
 ├── paid_amount (DECIMAL(10,2), DEFAULT 0)
 ├── remaining_amount (DECIMAL(10,2), NOT NULL)
@@ -417,6 +435,10 @@ purchases
 ├── deleted_by (FK -> users.id, INT, NULL)
 └── created_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 ```
+
+Purchase Invoice Number Format: `PI-{5-digit sequence}`
+Example: PI-00001, PI-00002
+Sequence is per factory and increments independently from sales invoices.
 
 ### PurchaseItems
 
@@ -472,11 +494,13 @@ Stores payments made or received.
 payments
 ├── id (PK, INT, AUTO_INCREMENT)
 ├── factory_id (FK -> factories.id, INT, NOT NULL)
+├── voucher_number (VARCHAR(50), UNIQUE, NOT NULL)  -- PV-XXXXX format
 ├── type (ENUM('CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT'), NOT NULL)
 ├── reference_id (INT, NOT NULL) -- customer_id or supplier_id
 ├── payment_method (ENUM('CASH', 'BANK'), NOT NULL)
 ├── bank_id (FK -> bank_accounts.id, INT, NULL)
 ├── amount (DECIMAL(10,2), NOT NULL)
+├── notes (TEXT)
 ├── created_by (FK -> users.id, INT, NOT NULL)
 ├── status (ENUM('ACTIVE', 'REVERTED'), DEFAULT 'ACTIVE')
 ├── is_deleted (BOOLEAN, DEFAULT FALSE)
@@ -484,6 +508,10 @@ payments
 ├── deleted_by (FK -> users.id, INT, NULL)
 └── created_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 ```
+
+Payment Voucher Number Format: `PV-{5-digit sequence}`
+Example: PV-00001, PV-00002
+Sequence is per factory.
 
 ### PaymentAllocations
 
@@ -506,6 +534,7 @@ Central financial ledger recording all money movements.
 transactions
 ├── id (PK, INT, AUTO_INCREMENT)
 ├── factory_id (FK -> factories.id, INT, NOT NULL)
+├── voucher_number (VARCHAR(50), UNIQUE, NULL)  -- JV-XXXXX for ADJUST type; NULL for others (linked via payment)
 ├── transaction_type (ENUM('IN', 'OUT', 'ADJUST', 'REVERSAL'), NOT NULL)
 ├── source_type (ENUM('CUSTOMER', 'SUPPLIER', 'SYSTEM'), NOT NULL)
 ├── source_id (INT, NULL) -- customer_id, supplier_id, or NULL for system
@@ -520,9 +549,31 @@ transactions
 └── created_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 ```
 
-### StockTransactions
+Adjustment Voucher Number Format: `JV-{5-digit sequence}`
+Example: JV-00001, JV-00002
+Sequence is per factory. Only ADJUST type transactions receive a JV number.
 
-Tracks all inventory changes.
+### DocumentSequences
+
+Tracks per-factory auto-incrementing counters for each document type.
+
+```
+document_sequences
+├── id (PK, INT, AUTO_INCREMENT)
+├── factory_id (FK -> factories.id, INT, NOT NULL)
+├── document_type (ENUM('SI', 'PI', 'PV', 'JV'), NOT NULL)
+└── last_sequence (INT, DEFAULT 0)
+
+UNIQUE KEY (factory_id, document_type)
+```
+
+Document number generation logic:
+1. Lock the row for the factory + document_type combination
+2. Increment last_sequence by 1
+3. Format as `{TYPE}-{PADDED_5_DIGIT_SEQUENCE}` (e.g., SI-00001)
+4. Store the formatted number on the respective record
+
+### StockTransactions
 
 ```
 stock_transactions
@@ -658,6 +709,26 @@ Property 24: Low stock alert threshold
 Property 25: Payment allocation marking
 *For any* sale or purchase, when the remaining amount reaches zero through payment allocation, the system SHALL mark it as fully paid
 **Validates: Requirements 16.5, 19.5**
+
+Property 26: Purchase invoice number uniqueness
+*For any* two purchases within the same factory, their purchase invoice numbers SHALL be unique
+**Validates: Requirement 25.1**
+
+Property 27: Payment voucher number uniqueness
+*For any* two payment records within the same factory, their payment voucher numbers SHALL be unique
+**Validates: Requirement 26.1, 26.2**
+
+Property 28: Adjustment voucher number uniqueness
+*For any* two ADJUST type transactions within the same factory, their adjustment voucher numbers SHALL be unique
+**Validates: Requirement 26.3**
+
+Property 29: Document number sequence monotonicity
+*For any* factory and document type, each newly generated document number SHALL have a sequence value strictly greater than all previously generated numbers of the same type for that factory
+**Validates: Requirements 29.1, 29.2, 29.3, 29.4**
+
+Property 30: Dynamic document reconstruction accuracy
+*For any* invoice or voucher regenerated from stored transaction data, the document content SHALL be identical to what would have been generated at the time of the original transaction
+**Validates: Requirement 30.1, 30.5**
 
 ## Error Handling
 

@@ -11,11 +11,12 @@
   - _Requirements: All_
 
 - [ ] 2. Create database schema and migrations
-  - Create migration scripts for all tables (factories, users, customers, suppliers, products, bag_weights, inventory, sales, sale_items, purchases, purchase_items, cash_accounts, bank_accounts, payments, payment_allocations, transactions, stock_transactions, settings)
+  - Create migration scripts for all tables (factories, users, customers, suppliers, products, bag_weights, inventory, sales, sale_items, purchases, purchase_items, cash_accounts, bank_accounts, payments, payment_allocations, transactions, stock_transactions, settings, document_sequences)
   - Implement foreign key constraints and indexes
-  - Add unique constraints (invoice_number, username, factory_id+product_id+weight_id)
+  - Add unique constraints (invoice_number on sales, invoice_number on purchases, voucher_number on payments, voucher_number on transactions, username, factory_id+product_id+weight_id)
+  - Add document_sequences table with unique constraint on (factory_id, document_type) for SI, PI, PV, JV types
   - Seed initial data (bag weights: 8kg, 10kg, 20kg, 40kg, 50kg)
-  - _Requirements: 3.1, 3.2, 4.1, 14.1, 15.1_
+  - _Requirements: 3.1, 3.2, 4.1, 14.1, 15.1, 29.1, 29.2, 29.3, 29.4_
 
 - [ ] 3. Implement authentication and authorization system
   - Create User model with password hashing using bcrypt
@@ -125,7 +126,8 @@
 
 - [ ] 10. Implement sales and billing system
   - Create Sale and SaleItem models
-  - Implement invoice number generation (INV-{YEAR}-{SEQUENCE})
+  - Implement document number generation service (shared utility for SI, PI, PV, JV using document_sequences table with row-level locking)
+  - Implement sales invoice number generation (SI-XXXXX) using document number service
   - Implement create sale API (POST /api/sales) with transaction management
   - Automatically reduce inventory when sale is created
   - Create stock transactions for inventory reduction
@@ -134,7 +136,9 @@
   - Update cash/bank balances based on payment
   - Create financial transaction records
   - Implement get sales APIs (GET /api/sales, GET /api/sales/:id)
-  - _Requirements: 1.4, 1.5, 1.6, 4.2, 5.1, 6.2, 14.2, 15.2, 17.1, 17.2_
+  - Implement sales invoice generation API (GET /api/sales/:id/invoice)
+  - Implement sales invoice PDF download API (GET /api/sales/:id/invoice/pdf)
+  - _Requirements: 1.4, 1.5, 1.6, 4.2, 5.1, 6.2, 14.2, 15.2, 17.1, 17.2, 27.1, 28.1, 29.1_
 
 - [ ] 10.1 Write property test for sale inventory reduction
   - **Property 1: Sale inventory reduction**
@@ -148,6 +152,14 @@
   - **Property 9: Invoice number uniqueness**
   - **Validates: Requirements 5.1**
 
+- [ ] 10.5 Write property test for purchase invoice number uniqueness
+  - **Property 26: Purchase invoice number uniqueness**
+  - **Validates: Requirement 25.1**
+
+- [ ] 10.6 Write property test for document number sequence monotonicity
+  - **Property 29: Document number sequence monotonicity**
+  - **Validates: Requirements 29.1, 29.2, 29.3, 29.4**
+
 - [ ] 10.4 Write property test for monetary calculations
   - **Property 10: Monetary calculation precision**
   - **Property 11: Sale total accuracy**
@@ -155,10 +167,13 @@
 
 - [ ] 11. Implement purchase management
   - Create Purchase and PurchaseItem models
+  - Implement purchase invoice number generation (PI-XXXXX) using document number service
   - Implement create purchase API (POST /api/purchases)
   - Update supplier outstanding payable when purchase is created
   - Implement get purchases APIs (GET /api/purchases, GET /api/purchases/:id)
-  - _Requirements: 18.2, 18.3, 18.5_
+  - Implement purchase invoice generation API (GET /api/purchases/:id/invoice)
+  - Implement purchase invoice PDF download API (GET /api/purchases/:id/invoice/pdf)
+  - _Requirements: 18.2, 18.3, 18.5, 25.1, 25.2, 25.3, 25.4, 25.5, 27.2, 28.2, 29.2_
 
 - [ ] 12. Implement payment allocation logic
   - Create Payment and PaymentAllocation models
@@ -179,23 +194,37 @@
 - [ ] 13. Implement payment recording system
   - Implement customer payment API (POST /api/payments/customer)
   - Implement supplier payment API (POST /api/payments/supplier)
+  - Implement payment voucher number generation (PV-XXXXX) using document number service
   - Update cash/bank balances based on payment method
   - Create financial transaction records
   - Apply payment allocation logic
   - Update customer/supplier outstanding balances
   - Implement get payments API (GET /api/payments)
-  - _Requirements: 16.1, 16.2, 16.3, 17.3, 19.1, 19.2, 19.3_
+  - Implement payment voucher generation API (GET /api/payments/:id/voucher)
+  - Implement payment voucher PDF download API (GET /api/payments/:id/voucher/pdf)
+  - _Requirements: 16.1, 16.2, 16.3, 17.3, 19.1, 19.2, 19.3, 26.1, 26.2, 26.4, 26.5, 27.3, 28.3, 29.3_
 
 - [ ] 13.1 Write property test for transaction ledger completeness
   - **Property 7: Transaction ledger completeness**
   - **Validates: Requirements 20.1, 20.2, 20.3**
 
+- [ ] 13.2 Write property test for payment voucher number uniqueness
+  - **Property 27: Payment voucher number uniqueness**
+  - **Validates: Requirements 26.1, 26.2**
+
+- [ ] 13.3 Write property test for adjustment voucher number uniqueness
+  - **Property 28: Adjustment voucher number uniqueness**
+  - **Validates: Requirement 26.3**
+
 - [ ] 14. Implement transaction ledger system
   - Create Transaction model
   - Ensure all financial movements create transaction records
+  - Implement adjustment voucher number generation (JV-XXXXX) for ADJUST type transactions using document number service
   - Implement transaction query API (GET /api/transactions)
   - Implement transaction filtering (date range, type, method, factory)
-  - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5_
+  - Implement adjustment voucher generation API (GET /api/transactions/:id/voucher)
+  - Implement adjustment voucher PDF download API (GET /api/transactions/:id/voucher/pdf)
+  - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 26.3, 26.4, 26.5, 27.4, 28.4, 29.4_
 
 - [ ] 15. Implement reversal functionality
   - Implement sale reversal API (POST /api/sales/:id/revert)
@@ -280,16 +309,21 @@
   - **Property 18: Available inventory filtering**
   - **Validates: Requirements 3.5, 4.4**
 
-- [ ] 22. Build frontend invoice generation
-  - Create InvoiceView component
-  - Display company information from settings
-  - Display customer details
-  - Display sale date and invoice number
-  - Display itemized product list with totals
+- [ ] 22. Build frontend invoice and voucher generation
+  - Create SalesInvoiceView component (SI-XXXXX)
+  - Create PurchaseInvoiceView component (PI-XXXXX)
+  - Create PaymentVoucherView component (PV-XXXXX)
+  - Create AdjustmentVoucherView component (JV-XXXXX)
+  - Create DocumentActionModal component (Print Now / Download PDF / Skip options shown after every transaction)
+  - Display company information from settings on all documents
+  - Display customer/supplier details, date, document number, and itemized lists
   - Display payment information (amount paid, method, remaining balance)
   - Display multiple partial payments if applicable
-  - Implement print functionality
-  - _Requirements: 5.2, 5.3, 5.4, 5.5, 24.1, 24.4, 24.5_
+  - Implement browser print functionality for all document types
+  - Implement PDF download functionality for all document types
+  - Integrate DocumentActionModal into billing save, purchase save, payment record, and adjustment flows
+  - Add view/print/download buttons to sale detail, purchase detail, payment detail, and transaction detail pages
+  - _Requirements: 5.2, 5.3, 5.4, 5.5, 24.1, 24.4, 24.5, 25.2, 25.3, 25.4, 25.5, 26.4, 26.5, 27.1, 27.2, 27.3, 27.4, 27.5, 28.1, 28.2, 28.3, 28.4, 28.5, 30.1, 30.5_
 
 - [ ] 23. Build frontend customer management
   - Create CustomerListPage with search
@@ -375,6 +409,10 @@
 - [ ] 32.1 Write property test for admin deletion validation
   - **Property 20: Admin deletion validation**
   - **Validates: Requirements 22.1, 22.2, 22.3**
+
+- [ ] 32.2 Write property test for dynamic document reconstruction accuracy
+  - **Property 30: Dynamic document reconstruction accuracy**
+  - **Validates: Requirements 30.1, 30.5**
 
 - [ ] 33. Implement error handling and validation
   - Add input validation on all forms
