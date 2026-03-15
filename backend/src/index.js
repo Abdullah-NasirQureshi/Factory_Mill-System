@@ -13,11 +13,16 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok' }));
 
 // Routes
-app.use('/api/auth',     require('./routes/auth'));
-app.use('/api/settings', require('./routes/factory'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/weights',  require('./routes/weights'));
-app.use('/api/users',    require('./routes/users'));
+app.use('/api/auth',      require('./routes/auth'));
+app.use('/api/settings',  require('./routes/factory'));
+app.use('/api/products',  require('./routes/products'));
+app.use('/api/weights',   require('./routes/weights'));
+app.use('/api/users',     require('./routes/users'));
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/customers', require('./routes/customers'));
+app.use('/api/suppliers', require('./routes/suppliers'));
+app.use('/api/cash',      require('./routes/cash'));
+app.use('/api/banks',     require('./routes/banks'));
 
 // Global error handler
 app.use((err, req, res, next) => {
