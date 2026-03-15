@@ -53,12 +53,12 @@ const createSale = async (req, res) => {
     const invoice_number = await nextDocNumber(conn, factory_id, 'SI');
 
     // insert sale
-    const [saleResult] = await conn.query(
+    const [saleRows] = await conn.query(
       `INSERT INTO sales (factory_id, customer_id, invoice_number, total_amount, paid_amount, remaining_amount, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, customer_id, invoice_number, total_amount, paid, remaining, user_id]
     );
-    const sale_id = saleResult.id;
+    const sale_id = saleRows[0].id;
 
     // insert sale items + reduce inventory + stock transactions
     for (const item of validatedItems) {
@@ -80,7 +80,7 @@ const createSale = async (req, res) => {
     // handle payment
     if (paid > 0) {
       const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
-      const [payResult] = await conn.query(
+      const [payRows] = await conn.query(
         `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, created_by)
          VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?)`,
         [factory_id, voucher_number, customer_id, payment_method, bank_id || null, paid, user_id]
@@ -88,7 +88,7 @@ const createSale = async (req, res) => {
       await conn.query(
         `INSERT INTO payment_allocations (payment_id, reference_type, reference_id, allocated_amount)
          VALUES (?, 'SALE', ?, ?)`,
-        [payResult.id, sale_id, paid]
+        [payRows[0].id, sale_id, paid]
       );
 
       // update cash/bank
@@ -102,14 +102,14 @@ const createSale = async (req, res) => {
       await conn.query(
         `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id)
          VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?)`,
-        [factory_id, customer_id, payment_method, bank_id || null, paid, payResult.id]
+        [factory_id, customer_id, payment_method, bank_id || null, paid, payRows[0].id]
       );
     }
 
     await conn.commit();
 
-    const [sale] = await conn.query('SELECT * FROM sales WHERE id = ?', [sale_id]);
-    return ok(res, { sale: sale[0] }, 201);
+    const [saleRows2] = await db.query('SELECT * FROM sales WHERE id = ?', [sale_id]);
+    return ok(res, { sale: saleRows2[0] }, 201);
   } catch (e) {
     await conn.rollback();
     throw e;

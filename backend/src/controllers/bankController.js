@@ -22,7 +22,7 @@ const createBank = async (req, res) => {
     'INSERT INTO bank_accounts (factory_id, bank_name, account_title, account_number, balance) VALUES (?, ?, ?, ?, ?)',
     [factory_id, bank_name, account_title, account_number, parseFloat(balance) || 0]
   );
-  const [rows] = await db.query('SELECT * FROM bank_accounts WHERE id = ?', [result.id]);
+  const [rows] = await db.query('SELECT * FROM bank_accounts WHERE id = ?', [result[0].id]);
   return ok(res, { bank: rows[0] }, 201);
 };
 
@@ -101,7 +101,7 @@ const deleteBank = async (req, res) => {
   const [txns] = await db.query(
     'SELECT COUNT(*) AS cnt FROM transactions WHERE bank_id = ?', [id]
   );
-  if (txns[0].cnt > 0)
+  if (parseInt(txns[0].cnt) > 0)
     return fail(res, 'BUSINESS_CANNOT_DELETE', 'Bank account has associated transactions and cannot be deleted');
 
   await db.query(

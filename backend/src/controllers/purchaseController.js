@@ -41,12 +41,12 @@ const createPurchase = async (req, res) => {
 
     const invoice_number = await nextDocNumber(conn, factory_id, 'PI');
 
-    const [pResult] = await conn.query(
+    const [pRows] = await conn.query(
       `INSERT INTO purchases (factory_id, supplier_id, invoice_number, total_amount, paid_amount, remaining_amount, purchase_date, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, supplier_id, invoice_number, total_amount, paid, remaining, purchase_date, user_id]
     );
-    const purchase_id = pResult.id;
+    const purchase_id = pRows[0].id;
 
     for (const item of validatedItems) {
       await conn.query(
@@ -57,7 +57,7 @@ const createPurchase = async (req, res) => {
 
     if (paid > 0) {
       const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
-      const [payResult] = await conn.query(
+      const [payRows] = await conn.query(
         `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, created_by)
          VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?)`,
         [factory_id, voucher_number, supplier_id, method, bank_id || null, paid, user_id]
@@ -65,7 +65,7 @@ const createPurchase = async (req, res) => {
       await conn.query(
         `INSERT INTO payment_allocations (payment_id, reference_type, reference_id, allocated_amount)
          VALUES (?, 'PURCHASE', ?, ?)`,
-        [payResult.id, purchase_id, paid]
+        [payRows[0].id, purchase_id, paid]
       );
       if (method === 'CASH') {
         await conn.query('UPDATE cash_accounts SET balance = balance - ? WHERE factory_id = ?', [paid, factory_id]);
@@ -75,13 +75,13 @@ const createPurchase = async (req, res) => {
       await conn.query(
         `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id)
          VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?)`,
-        [factory_id, supplier_id, method, bank_id || null, paid, payResult.id]
+        [factory_id, supplier_id, method, bank_id || null, paid, payRows[0].id]
       );
     }
 
     await conn.commit();
-    const [purchase] = await conn.query('SELECT * FROM purchases WHERE id = ?', [purchase_id]);
-    return ok(res, { purchase: purchase[0] }, 201);
+    const [purchaseRows] = await db.query('SELECT * FROM purchases WHERE id = ?', [purchase_id]);
+    return ok(res, { purchase: purchaseRows[0] }, 201);
   } catch (e) {
     await conn.rollback();
     throw e;

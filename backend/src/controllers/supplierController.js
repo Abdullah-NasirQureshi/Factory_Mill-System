@@ -35,10 +35,10 @@ const getSupplier = async (req, res) => {
     `SELECT pu.id, pu.invoice_number, pu.total_amount, pu.paid_amount,
             pu.remaining_amount, pu.purchase_date, pu.status, pu.created_at,
             COALESCE(
-              JSON_ARRAYAGG(
-                JSON_OBJECT('product_name', pi.product_name, 'quantity', pi.quantity,
+              json_agg(
+                json_build_object('product_name', pi.product_name, 'quantity', pi.quantity,
                             'unit_price', pi.unit_price, 'total', pi.total)
-              ), JSON_ARRAY()
+              ) FILTER (WHERE pi.id IS NOT NULL), '[]'::json
             ) AS items
      FROM purchases pu
      LEFT JOIN purchase_items pi ON pi.purchase_id = pu.id
@@ -64,7 +64,7 @@ const createSupplier = async (req, res) => {
     'INSERT INTO suppliers (factory_id, name, phone, address) VALUES (?, ?, ?, ?)',
     [factory_id, name, phone || null, address || null]
   );
-  const [rows] = await db.query('SELECT * FROM suppliers WHERE id = ?', [result.id]);
+  const [rows] = await db.query('SELECT * FROM suppliers WHERE id = ?', [result[0].id]);
   return ok(res, { supplier: rows[0] }, 201);
 };
 
@@ -104,7 +104,7 @@ const deleteSupplier = async (req, res) => {
     "SELECT COUNT(*) AS cnt FROM purchases WHERE supplier_id = ? AND status = 'ACTIVE'",
     [id]
   );
-  if (purch[0].cnt > 0)
+  if (parseInt(purch[0].cnt) > 0)
     return fail(res, 'BUSINESS_CANNOT_DELETE', 'Supplier has active purchases and cannot be deleted');
 
   const [bal] = await db.query(

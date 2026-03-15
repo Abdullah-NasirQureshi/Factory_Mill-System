@@ -36,11 +36,11 @@ const getCustomer = async (req, res) => {
     `SELECT s.id, s.invoice_number, s.total_amount, s.paid_amount,
             s.remaining_amount, s.status, s.created_at,
             COALESCE(
-              JSON_ARRAYAGG(
-                JSON_OBJECT('product', p.name, 'weight', bw.weight_value,
+              json_agg(
+                json_build_object('product', p.name, 'weight', bw.weight_value,
                             'unit', bw.unit, 'quantity', si.quantity,
                             'price', si.price, 'total', si.total)
-              ), JSON_ARRAY()
+              ) FILTER (WHERE si.id IS NOT NULL), '[]'::json
             ) AS items
      FROM sales s
      LEFT JOIN sale_items si ON si.sale_id = s.id
@@ -68,7 +68,7 @@ const createCustomer = async (req, res) => {
     'INSERT INTO customers (factory_id, name, phone, address) VALUES (?, ?, ?, ?)',
     [factory_id, name, phone || null, address || null]
   );
-  const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [result.id]);
+  const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [result[0].id]);
   return ok(res, { customer: rows[0] }, 201);
 };
 
@@ -109,7 +109,7 @@ const deleteCustomer = async (req, res) => {
     "SELECT COUNT(*) AS cnt FROM sales WHERE customer_id = ? AND status = 'ACTIVE'",
     [id]
   );
-  if (sales[0].cnt > 0)
+  if (parseInt(sales[0].cnt) > 0)
     return fail(res, 'BUSINESS_CANNOT_DELETE', 'Customer has active sales and cannot be deleted');
 
   const [bal] = await db.query(

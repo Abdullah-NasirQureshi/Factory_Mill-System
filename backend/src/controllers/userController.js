@@ -29,7 +29,7 @@ const createUser = async (req, res) => {
     'INSERT INTO users (factory_id, username, password_hash, role) VALUES (?, ?, ?, ?)',
     [factory_id, username, password_hash, role]
   );
-  return ok(res, { user: { id: result.id, username, role, factory_id } }, 201);
+  return ok(res, { user: { id: result[0].id, username, role, factory_id } }, 201);
 };
 
 const updateUser = async (req, res) => {

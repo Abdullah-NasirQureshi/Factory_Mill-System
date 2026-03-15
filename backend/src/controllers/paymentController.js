@@ -28,12 +28,12 @@ const recordCustomerPayment = async (req, res) => {
     if (!cust[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Customer not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
-    const [payResult] = await conn.query(
+    const [payRows] = await conn.query(
       `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
        VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
       [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id]
     );
-    const payment_id = payResult.id;
+    const payment_id = payRows[0].id;
 
     // oldest-first allocation
     await allocatePayment(conn, 'SALE', 'sales', customer_id, 'customer_id', factory_id, payment_id, amount);
@@ -53,8 +53,8 @@ const recordCustomerPayment = async (req, res) => {
     );
 
     await conn.commit();
-    const [payment] = await conn.query('SELECT * FROM payments WHERE id = ?', [payment_id]);
-    return ok(res, { payment: payment[0] }, 201);
+    const [paymentRows] = await db.query('SELECT * FROM payments WHERE id = ?', [payment_id]);
+    return ok(res, { payment: paymentRows[0] }, 201);
   } catch (e) {
     await conn.rollback();
     throw e;
@@ -88,12 +88,12 @@ const recordSupplierPayment = async (req, res) => {
     if (!sup[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Supplier not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
-    const [payResult] = await conn.query(
+    const [payRows2] = await conn.query(
       `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
        VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
       [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id]
     );
-    const payment_id = payResult.id;
+    const payment_id = payRows2[0].id;
 
     await allocatePayment(conn, 'PURCHASE', 'purchases', supplier_id, 'supplier_id', factory_id, payment_id, amount);
 
@@ -110,8 +110,8 @@ const recordSupplierPayment = async (req, res) => {
     );
 
     await conn.commit();
-    const [payment] = await conn.query('SELECT * FROM payments WHERE id = ?', [payment_id]);
-    return ok(res, { payment: payment[0] }, 201);
+    const [paymentRows2] = await db.query('SELECT * FROM payments WHERE id = ?', [payment_id]);
+    return ok(res, { payment: paymentRows2[0] }, 201);
   } catch (e) {
     await conn.rollback();
     throw e;
