@@ -124,8 +124,12 @@ const recordSupplierPayment = async (req, res) => {
 const getPayments = async (req, res) => {
   const { factory_id } = req.user;
   const { type, from, to } = req.query;
-  let sql = `SELECT pay.*, ba.bank_name FROM payments pay
+  let sql = `SELECT pay.*, ba.bank_name,
+             CASE WHEN pay.type = 'CUSTOMER_PAYMENT' THEN c.name ELSE s.name END AS party_name
+             FROM payments pay
              LEFT JOIN bank_accounts ba ON ba.id = pay.bank_id
+             LEFT JOIN customers c ON pay.type = 'CUSTOMER_PAYMENT' AND c.id = pay.reference_id
+             LEFT JOIN suppliers s ON pay.type = 'SUPPLIER_PAYMENT' AND s.id = pay.reference_id
              WHERE pay.factory_id = ?`;
   const params = [factory_id];
   if (type) { sql += ' AND pay.type = ?'; params.push(type); }

@@ -28,9 +28,71 @@ export default function InvoiceView({ type, data, onClose }) {
     win.print();
   };
 
+  const isPayment = type === 'payment';
   const isSale = type === 'sale';
+
+  // Payment voucher render
+  if (isPayment) {
+    const pay = data.payment || {};
+    const allocations = data.allocations || [];
+    const docSettings = data.settings || settings;
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <button className="btn btn-secondary btn-sm" onClick={onClose} style={{ marginBottom: 8 }}>← Back</button>
+            <h1 className="page-title">{pay.voucher_number}</h1>
+          </div>
+          <button className="btn btn-primary" onClick={handlePrint}>Print</button>
+        </div>
+        <div className="card">
+          <div className="card-body" ref={printRef}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <h2 style={{ margin: 0 }}>{docSettings.company_name || 'MillFlow ERP'}</h2>
+              {docSettings.address && <p style={{ margin: '4px 0', color: '#666' }}>{docSettings.address}</p>}
+              {docSettings.phone && <p style={{ margin: '4px 0', color: '#666' }}>Tel: {docSettings.phone}</p>}
+              <h3 style={{ marginTop: 16 }}>PAYMENT VOUCHER</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+              <div>
+                <p><strong>{pay.type === 'CUSTOMER_PAYMENT' ? 'Received From' : 'Paid To'}:</strong> {pay.party_name || '—'}</p>
+                <p><strong>Type:</strong> {pay.type === 'CUSTOMER_PAYMENT' ? 'Customer Payment' : 'Supplier Payment'}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p><strong>Voucher #:</strong> {pay.voucher_number}</p>
+                <p><strong>Date:</strong> {new Date(pay.created_at).toLocaleString()}</p>
+              </div>
+            </div>
+            <table className="table">
+              <tbody>
+                <tr><td><strong>Amount</strong></td><td><strong>Rs {fmt(pay.amount)}</strong></td></tr>
+                <tr><td>Payment Method</td><td>{pay.payment_method}{pay.bank_name ? ` — ${pay.bank_name}` : ''}</td></tr>
+                {pay.notes && <tr><td>Notes</td><td>{pay.notes}</td></tr>}
+              </tbody>
+            </table>
+            {allocations.length > 0 && (
+              <>
+                <h4 style={{ marginTop: 16 }}>Allocated To</h4>
+                <table className="table">
+                  <thead><tr><th>Reference</th><th>Amount</th></tr></thead>
+                  <tbody>
+                    {allocations.map((a, i) => (
+                      <tr key={i}><td>{a.reference_type} #{a.reference_id}</td><td>Rs {fmt(a.allocated_amount)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+            {docSettings.invoice_footer && <p style={{ marginTop: 24, textAlign: 'center', color: '#666', fontSize: 12 }}>{docSettings.invoice_footer}</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Sale / Purchase invoice render
   const items = data.items || [];
-  const docNumber = isSale ? data.invoice_number : data.invoice_number;
+  const docNumber = data.invoice_number;
   const partyLabel = isSale ? 'Customer' : 'Supplier';
   const partyName = isSale ? data.customer_name : data.supplier_name;
   const dateField = isSale ? data.created_at : data.purchase_date;
