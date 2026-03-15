@@ -114,7 +114,7 @@ export default function InventoryPage() {
                   <label className="form-label">Weight *</label>
                   <select className="form-select" value={form.weight_id} onChange={e => setForm(f => ({ ...f, weight_id: e.target.value }))} required>
                     <option value="">-- Select Weight --</option>
-                    {weights.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                    {weights.map(w => <option key={w.id} value={w.id}>{w.weight_value}{w.unit}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
