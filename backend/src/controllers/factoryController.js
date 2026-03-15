@@ -31,10 +31,11 @@ const updateSettings = async (req, res) => {
 
   if (!setClauses) return fail(res, 'VALIDATION_REQUIRED_FIELD', 'No fields to update');
 
+  const filteredKeys = Object.keys(fields).filter((k) => fields[k] !== undefined);
   await db.query(
-    `INSERT INTO settings (factory_id, ${Object.keys(fields).filter((k) => fields[k] !== undefined).join(', ')})
+    `INSERT INTO settings (factory_id, ${filteredKeys.join(', ')})
      VALUES (?, ${values.map(() => '?').join(', ')})
-     ON DUPLICATE KEY UPDATE ${setClauses}`,
+     ON CONFLICT (factory_id) DO UPDATE SET ${setClauses}`,
     [factory_id, ...values, ...values]
   );
 

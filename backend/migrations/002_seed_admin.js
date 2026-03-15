@@ -4,30 +4,37 @@ const db = require('../src/config/db');
 
 async function seed() {
   // 1. Insert factory
-  const [fResult] = await db.query(
+  const [fRows] = await db.query(
     `INSERT INTO factories (name, address, phone) VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = name`,
+     ON CONFLICT DO NOTHING RETURNING id`,
     ['Main Factory', 'Factory Address', '0300-0000000']
   );
-  const factoryId = fResult.insertId || 1;
+  let factoryId = fRows[0]?.id;
+  if (!factoryId) {
+    const [existing] = await db.query("SELECT id FROM factories WHERE name = 'Main Factory' LIMIT 1");
+    factoryId = existing[0]?.id || 1;
+  }
 
   // 2. Insert settings row
   await db.query(
-    `INSERT IGNORE INTO settings (factory_id, company_name, invoice_footer)
-     VALUES (?, ?, ?)`,
+    `INSERT INTO settings (factory_id, company_name, invoice_footer)
+     VALUES (?, ?, ?)
+     ON CONFLICT (factory_id) DO NOTHING`,
     [factoryId, 'Main Factory', 'Thank you for your business!']
   );
 
   // 3. Insert cash account
   await db.query(
-    `INSERT IGNORE INTO cash_accounts (factory_id, balance) VALUES (?, 0)`,
+    `INSERT INTO cash_accounts (factory_id, balance) VALUES (?, 0)
+     ON CONFLICT (factory_id) DO NOTHING`,
     [factoryId]
   );
 
   // 4. Seed document sequences for all types
   for (const type of ['SI', 'PI', 'PV', 'JV']) {
     await db.query(
-      `INSERT IGNORE INTO document_sequences (factory_id, document_type, last_sequence) VALUES (?, ?, 0)`,
+      `INSERT INTO document_sequences (factory_id, document_type, last_sequence) VALUES (?, ?, 0)
+       ON CONFLICT (factory_id, document_type) DO NOTHING`,
       [factoryId, type]
     );
   }
@@ -36,7 +43,7 @@ async function seed() {
   const hash = await bcrypt.hash('admin123', 10);
   await db.query(
     `INSERT INTO users (factory_id, username, password_hash, role) VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE username = username`,
+     ON CONFLICT (username) DO NOTHING`,
     [factoryId, 'admin', hash, 'ADMIN']
   );
 
@@ -44,7 +51,7 @@ async function seed() {
   const hash2 = await bcrypt.hash('acc123', 10);
   await db.query(
     `INSERT INTO users (factory_id, username, password_hash, role) VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE username = username`,
+     ON CONFLICT (username) DO NOTHING`,
     [factoryId, 'accountant', hash2, 'ACCOUNTANT']
   );
 

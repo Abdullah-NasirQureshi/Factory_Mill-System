@@ -22,7 +22,7 @@ const createBank = async (req, res) => {
     'INSERT INTO bank_accounts (factory_id, bank_name, account_title, account_number, balance) VALUES (?, ?, ?, ?, ?)',
     [factory_id, bank_name, account_title, account_number, parseFloat(balance) || 0]
   );
-  const [rows] = await db.query('SELECT * FROM bank_accounts WHERE id = ?', [result.insertId]);
+  const [rows] = await db.query('SELECT * FROM bank_accounts WHERE id = ?', [result.id]);
   return ok(res, { bank: rows[0] }, 201);
 };
 

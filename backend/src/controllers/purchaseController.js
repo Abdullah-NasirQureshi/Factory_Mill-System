@@ -46,7 +46,7 @@ const createPurchase = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, supplier_id, invoice_number, total_amount, paid, remaining, purchase_date, user_id]
     );
-    const purchase_id = pResult.insertId;
+    const purchase_id = pResult.id;
 
     for (const item of validatedItems) {
       await conn.query(
@@ -65,7 +65,7 @@ const createPurchase = async (req, res) => {
       await conn.query(
         `INSERT INTO payment_allocations (payment_id, reference_type, reference_id, allocated_amount)
          VALUES (?, 'PURCHASE', ?, ?)`,
-        [payResult.insertId, purchase_id, paid]
+        [payResult.id, purchase_id, paid]
       );
       if (method === 'CASH') {
         await conn.query('UPDATE cash_accounts SET balance = balance - ? WHERE factory_id = ?', [paid, factory_id]);
@@ -75,7 +75,7 @@ const createPurchase = async (req, res) => {
       await conn.query(
         `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id)
          VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?)`,
-        [factory_id, supplier_id, method, bank_id || null, paid, payResult.insertId]
+        [factory_id, supplier_id, method, bank_id || null, paid, payResult.id]
       );
     }
 

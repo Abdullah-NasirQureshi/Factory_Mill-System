@@ -68,7 +68,7 @@ const createCustomer = async (req, res) => {
     'INSERT INTO customers (factory_id, name, phone, address) VALUES (?, ?, ?, ?)',
     [factory_id, name, phone || null, address || null]
   );
-  const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [result.insertId]);
+  const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [result.id]);
   return ok(res, { customer: rows[0] }, 201);
 };
 

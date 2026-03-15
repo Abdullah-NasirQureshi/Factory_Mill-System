@@ -33,7 +33,7 @@ const createProduct = async (req, res) => {
     'INSERT INTO products (factory_id, name) VALUES (?, ?)',
     [factory_id, name]
   );
-  const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [result.insertId]);
+  const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [result.id]);
   return ok(res, { product: rows[0] }, 201);
 };
 

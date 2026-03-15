@@ -33,7 +33,7 @@ const recordCustomerPayment = async (req, res) => {
        VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
       [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id]
     );
-    const payment_id = payResult.insertId;
+    const payment_id = payResult.id;
 
     // oldest-first allocation
     await allocatePayment(conn, 'SALE', 'sales', customer_id, 'customer_id', factory_id, payment_id, amount);
@@ -93,7 +93,7 @@ const recordSupplierPayment = async (req, res) => {
        VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
       [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id]
     );
-    const payment_id = payResult.insertId;
+    const payment_id = payResult.id;
 
     await allocatePayment(conn, 'PURCHASE', 'purchases', supplier_id, 'supplier_id', factory_id, payment_id, amount);
 

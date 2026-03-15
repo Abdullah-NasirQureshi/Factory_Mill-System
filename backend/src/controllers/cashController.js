@@ -25,7 +25,7 @@ const setCashBalance = async (req, res) => {
 
     await conn.query(
       `INSERT INTO cash_accounts (factory_id, balance) VALUES (?, ?)
-       ON DUPLICATE KEY UPDATE balance = VALUES(balance)`,
+       ON CONFLICT (factory_id) DO UPDATE SET balance = EXCLUDED.balance`,
       [factory_id, balance]
     );
 

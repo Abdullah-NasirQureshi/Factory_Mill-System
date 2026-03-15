@@ -58,7 +58,7 @@ const createSale = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, customer_id, invoice_number, total_amount, paid, remaining, user_id]
     );
-    const sale_id = saleResult.insertId;
+    const sale_id = saleResult.id;
 
     // insert sale items + reduce inventory + stock transactions
     for (const item of validatedItems) {
@@ -88,7 +88,7 @@ const createSale = async (req, res) => {
       await conn.query(
         `INSERT INTO payment_allocations (payment_id, reference_type, reference_id, allocated_amount)
          VALUES (?, 'SALE', ?, ?)`,
-        [payResult.insertId, sale_id, paid]
+        [payResult.id, sale_id, paid]
       );
 
       // update cash/bank
@@ -102,7 +102,7 @@ const createSale = async (req, res) => {
       await conn.query(
         `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id)
          VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?)`,
-        [factory_id, customer_id, payment_method, bank_id || null, paid, payResult.insertId]
+        [factory_id, customer_id, payment_method, bank_id || null, paid, payResult.id]
       );
     }
 

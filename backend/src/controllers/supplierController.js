@@ -64,7 +64,7 @@ const createSupplier = async (req, res) => {
     'INSERT INTO suppliers (factory_id, name, phone, address) VALUES (?, ?, ?, ?)',
     [factory_id, name, phone || null, address || null]
   );
-  const [rows] = await db.query('SELECT * FROM suppliers WHERE id = ?', [result.insertId]);
+  const [rows] = await db.query('SELECT * FROM suppliers WHERE id = ?', [result.id]);
   return ok(res, { supplier: rows[0] }, 201);
 };
 

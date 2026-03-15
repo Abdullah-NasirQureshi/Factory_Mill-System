@@ -53,7 +53,7 @@ const addStock = async (req, res) => {
     await conn.query(
       `INSERT INTO inventory (factory_id, product_id, weight_id, quantity)
        VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)`,
+       ON CONFLICT (factory_id, product_id, weight_id) DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity`,
       [factory_id, product_id, weight_id, quantity]
     );
 
@@ -105,7 +105,7 @@ const adjustStock = async (req, res) => {
     await conn.query(
       `INSERT INTO inventory (factory_id, product_id, weight_id, quantity)
        VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)`,
+       ON CONFLICT (factory_id, product_id, weight_id) DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity`,
       [factory_id, product_id, weight_id, quantity]
     );
 
