@@ -21,8 +21,12 @@ app.use('/api/users',     require('./routes/users'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/suppliers', require('./routes/suppliers'));
-app.use('/api/cash',      require('./routes/cash'));
-app.use('/api/banks',     require('./routes/banks'));
+app.use('/api/cash',         require('./routes/cash'));
+app.use('/api/banks',        require('./routes/banks'));
+app.use('/api/sales',        require('./routes/sales'));
+app.use('/api/purchases',    require('./routes/purchases'));
+app.use('/api/payments',     require('./routes/payments'));
+app.use('/api/transactions', require('./routes/transactions'));
 
 // Global error handler
 app.use((err, req, res, next) => {
