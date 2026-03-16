@@ -45,14 +45,14 @@ export default function InventoryPage() {
     } finally { setSaving(false); }
   };
 
-  // Group by product
-  const grouped = products.map(p => ({
-    ...p,
-    weights: weights.map(w => {
-      const inv = inventory.find(i => i.product_id === p.id && i.weight_id === w.id);
-      return { ...w, quantity: inv ? inv.quantity : 0, low: inv && inv.quantity <= 10 };
-    }).filter(w => w.quantity > 0 || true),
-  }));
+  // Group inventory by product for summary
+  const summary = products
+    .filter(p => inventory.some(i => i.product_id === p.id))
+    .map(p => {
+      const rows = inventory.filter(i => i.product_id === p.id);
+      const totalBags = rows.reduce((s, i) => s + Number(i.quantity), 0);
+      return { ...p, totalBags, rows };
+    });
 
   return (
     <div>
@@ -64,7 +64,36 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {loading ? <div style={{ padding: 24, textAlign: 'center' }}>Loading...</div> : (
+      {loading ? <div style={{ padding: 24, textAlign: 'center' }}>Loading...</div> : (<>
+
+        {/* ── Stock Summary ── */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Stock Summary</h2>
+          {summary.length === 0
+            ? <div className="card"><div className="card-body" style={{ color: 'var(--text-muted)', textAlign: 'center' }}>No stock available</div></div>
+            : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+                {summary.map(p => (
+                  <div key={p.id} className="card" style={{ padding: 0 }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg-tertiary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.name}</span>
+                      <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>{fmt(p.totalBags)} bags</span>
+                    </div>
+                    <div style={{ padding: '8px 16px 12px' }}>
+                      {p.rows.map(r => (
+                        <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '3px 0', color: 'var(--text-secondary)' }}>
+                          <span>{r.weight_value}{r.unit}</span>
+                          <span style={{ fontWeight: 600 }}>{fmt(r.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+          }
+        </div>
+
+        {/* ── Detailed Table ── */}
+        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Stock Details</h2>
         <div className="card">
           <div className="card-body" style={{ padding: 0 }}>
             <table className="table">
@@ -92,7 +121,7 @@ export default function InventoryPage() {
             </table>
           </div>
         </div>
-      )}
+      </>)}
 
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>

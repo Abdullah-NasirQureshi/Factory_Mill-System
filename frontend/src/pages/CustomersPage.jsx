@@ -44,6 +44,17 @@ export default function CustomersPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm(`Delete this customer? This will fail if they have active sales or outstanding balance.`)) return;
+    try {
+      await api.delete(`/customers/${editId}`);
+      toast('Customer deleted', 'success');
+      setShowForm(false); load();
+    } catch (err) {
+      toast(err.response?.data?.error?.message || 'Cannot delete', 'error');
+    }
+  };
+
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.phone || '').includes(search)
@@ -105,6 +116,7 @@ export default function CustomersPage() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                {editId && <button type="button" className="btn btn-danger" onClick={handleDelete}>Delete</button>}
                 <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
               </div>
             </form>
