@@ -37,6 +37,17 @@ export default function SuppliersPage() {
     } finally { setSaving(false); }
   };
 
+  const handleDelete = async () => {
+    if (!confirm('Delete this supplier? This will fail if they have active purchases or outstanding payables.')) return;
+    try {
+      await api.delete(`/suppliers/${editId}`);
+      toast('Supplier deleted', 'success');
+      setShowForm(false); load();
+    } catch (err) {
+      toast(err.response?.data?.error?.message || 'Cannot delete', 'error');
+    }
+  };
+
   const filtered = suppliers.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) || (s.phone || '').includes(search)
   );
@@ -96,6 +107,7 @@ export default function SuppliersPage() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                {editId && <button type="button" className="btn btn-danger" onClick={handleDelete}>Delete</button>}
                 <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
               </div>
             </form>

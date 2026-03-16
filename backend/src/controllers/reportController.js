@@ -87,31 +87,48 @@ const getSalesByProduct = async (req, res) => {
 // GET /api/reports/inventory
 const getInventoryReport = async (req, res) => {
   const { factory_id } = req.user;
+  // Only return rows that actually have stock (quantity > 0)
   const [rows] = await db.query(
     `SELECT p.name AS product_name, p.status AS product_status,
             bw.weight_value, bw.unit,
-            COALESCE(i.quantity, 0) AS quantity
-     FROM products p
-     CROSS JOIN bag_weights bw
-     LEFT JOIN inventory i ON i.product_id = p.id AND i.weight_id = bw.id AND i.factory_id = ?
-     WHERE p.factory_id = ?
+            i.quantity,
+            (i.quantity * bw.weight_value) AS total_kg
+     FROM inventory i
+     JOIN products p ON p.id = i.product_id
+     JOIN bag_weights bw ON bw.id = i.weight_id
+     WHERE i.factory_id = ? AND i.quantity > 0
      ORDER BY p.name, bw.weight_value`,
-    [factory_id, factory_id]
+    [factory_id]
   );
-  return ok(res, { inventory: rows });
+
+  // Summary per product
+  const [summary] = await db.query(
+    `SELECT p.name AS product_name,
+            SUM(i.quantity) AS total_bags,
+            SUM(i.quantity * bw.weight_value) AS total_kg
+     FROM inventory i
+     JOIN products p ON p.id = i.product_id
+     JOIN bag_weights bw ON bw.id = i.weight_id
+     WHERE i.factory_id = ? AND i.quantity > 0
+     GROUP BY p.id, p.name
+     ORDER BY p.name`,
+    [factory_id]
+  );
+
+  return ok(res, { inventory: rows, summary });
 };
 
 // GET /api/reports/customer-dues
 const getCustomerDuesReport = async (req, res) => {
   const { factory_id } = req.user;
   const [rows] = await db.query(
-    `SELECT c.id, c.name, c.phone,
+    `SELECT c.id, c.name, c.phone, c.address,
             COALESCE(SUM(s.remaining_amount), 0) AS outstanding_balance,
             COUNT(s.id) AS unpaid_invoices
      FROM customers c
      LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'ACTIVE' AND s.remaining_amount > 0
      WHERE c.factory_id = ? AND c.is_deleted = FALSE
-     GROUP BY c.id, c.name, c.phone
+     GROUP BY c.id, c.name, c.phone, c.address
      HAVING COALESCE(SUM(s.remaining_amount), 0) > 0
      ORDER BY outstanding_balance DESC`,
     [factory_id]
@@ -265,6 +282,145 @@ const getDashboard = async (req, res) => {
   });
 };
 
+// GET /api/reports/individual/product?product_id=&from=&to=
+const getIndividualProductReport = async (req, res) => {
+  try {
+    const { factory_id } = req.user;
+    const { product_id, from, to } = req.query;
+    if (!product_id) return res.status(400).json({ success: false, error: { message: 'product_id is required' } });
+
+    let sql = `SELECT si.quantity, si.price, si.total,
+                      bw.weight_value, bw.unit,
+                      sal.invoice_number, sal.created_at,
+                      c.name AS customer_name
+               FROM sale_items si
+               JOIN sales sal ON sal.id = si.sale_id
+               JOIN bag_weights bw ON bw.id = si.weight_id
+               JOIN customers c ON c.id = sal.customer_id
+               WHERE sal.factory_id = ? AND sal.status = 'ACTIVE' AND si.product_id = ?`;
+    const params = [factory_id, product_id];
+    if (from) { sql += ' AND sal.created_at >= ?'; params.push(from); }
+    if (to)   { sql += ' AND DATE(sal.created_at) <= ?'; params.push(to); }
+    sql += ' ORDER BY sal.created_at DESC';
+
+    const [rows] = await db.query(sql, params);
+
+    const summary = {
+      total_invoices: new Set(rows.map(r => r.invoice_number)).size,
+      total_quantity: rows.reduce((acc, r) => acc + Number(r.quantity || 0), 0),
+      total_revenue:  rows.reduce((acc, r) => acc + Number(r.total || 0), 0),
+    };
+
+    return ok(res, { sales: rows, summary });
+  } catch (err) {
+    console.error('getIndividualProductReport error:', err);
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+};
+
+// GET /api/reports/individual/customer?customer_id=&from=&to=
+const getIndividualCustomerReport = async (req, res) => {
+  try {
+    const { factory_id } = req.user;
+    const { customer_id, from, to } = req.query;
+    if (!customer_id) return res.status(400).json({ success: false, error: { message: 'customer_id is required' } });
+
+    let sql = `SELECT id, invoice_number, total_amount, paid_amount, remaining_amount, created_at
+               FROM sales
+               WHERE factory_id = ? AND status = 'ACTIVE' AND customer_id = ?`;
+    const params = [factory_id, customer_id];
+    if (from) { sql += ' AND created_at >= ?'; params.push(from); }
+    if (to)   { sql += ' AND DATE(created_at) <= ?'; params.push(to); }
+    sql += ' ORDER BY created_at DESC';
+
+    const [rows] = await db.query(sql, params);
+
+    const summary = {
+      total_invoices:    rows.length,
+      total_billed:      rows.reduce((acc, r) => acc + Number(r.total_amount || 0), 0),
+      total_paid:        rows.reduce((acc, r) => acc + Number(r.paid_amount || 0), 0),
+      total_outstanding: rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
+    };
+
+    return ok(res, { sales: rows, summary });
+  } catch (err) {
+    console.error('getIndividualCustomerReport error:', err);
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+};
+
+// GET /api/reports/individual/supplier?supplier_id=&from=&to=
+const getIndividualSupplierReport = async (req, res) => {
+  try {
+    const { factory_id } = req.user;
+    const { supplier_id, from, to } = req.query;
+    if (!supplier_id) return res.status(400).json({ success: false, error: { message: 'supplier_id is required' } });
+
+    let sql = `SELECT id, invoice_number, total_amount, paid_amount, remaining_amount, purchase_date, created_at
+               FROM purchases
+               WHERE factory_id = ? AND status = 'ACTIVE' AND supplier_id = ?`;
+    const params = [factory_id, supplier_id];
+    if (from) { sql += ' AND created_at >= ?'; params.push(from); }
+    if (to)   { sql += ' AND DATE(created_at) <= ?'; params.push(to); }
+    sql += ' ORDER BY created_at DESC';
+
+    const [rows] = await db.query(sql, params);
+
+    const summary = {
+      total_purchases:   rows.length,
+      total_billed:      rows.reduce((acc, r) => acc + Number(r.total_amount || 0), 0),
+      total_paid:        rows.reduce((acc, r) => acc + Number(r.paid_amount || 0), 0),
+      total_outstanding: rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
+    };
+
+    return ok(res, { purchases: rows, summary });
+  } catch (err) {
+    console.error('getIndividualSupplierReport error:', err);
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+};
+
+// GET /api/reports/individual/bank?bank_id=&from=&to=
+const getIndividualBankReport = async (req, res) => {
+  try {
+    const { factory_id } = req.user;
+    const { bank_id, from, to } = req.query;
+    if (!bank_id) return res.status(400).json({ success: false, error: { message: 'bank_id is required' } });
+
+    let sql = `SELECT t.id, t.transaction_type, t.amount, t.source_type, t.notes, t.created_at,
+                      CASE t.source_type
+                        WHEN 'CUSTOMER' THEN cust.name
+                        WHEN 'SUPPLIER' THEN supp.name
+                        ELSE 'System'
+                      END AS source_name
+               FROM transactions t
+               LEFT JOIN customers cust ON t.source_type = 'CUSTOMER' AND cust.id = t.source_id
+               LEFT JOIN suppliers supp ON t.source_type = 'SUPPLIER' AND supp.id = t.source_id
+               WHERE t.factory_id = ? AND t.bank_id = ? AND t.is_deleted = FALSE`;
+    const params = [factory_id, bank_id];
+    if (from) { sql += ' AND t.created_at >= ?'; params.push(from); }
+    if (to)   { sql += ' AND DATE(t.created_at) <= ?'; params.push(to); }
+    sql += ' ORDER BY t.created_at DESC';
+
+    const [rows] = await db.query(sql, params);
+
+    const [bankRows] = await db.query(
+      'SELECT balance FROM bank_accounts WHERE id = ? AND factory_id = ?', [bank_id, factory_id]
+    );
+
+    const summary = {
+      current_balance: bankRows[0]?.balance || 0,
+      total_in:  rows.filter(r => r.transaction_type === 'IN').reduce((acc, r) => acc + Number(r.amount || 0), 0),
+      total_out: rows.filter(r => r.transaction_type === 'OUT').reduce((acc, r) => acc + Number(r.amount || 0), 0),
+    };
+
+    return ok(res, { transactions: rows, summary });
+  } catch (err) {
+    console.error('getIndividualBankReport error:', err);
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+};
+
 module.exports = {
   getDailySalesReport,
   getMonthlySalesReport,
@@ -275,4 +431,8 @@ module.exports = {
   getCashFlowReport,
   getTransactionReport,
   getDashboard,
+  getIndividualProductReport,
+  getIndividualCustomerReport,
+  getIndividualSupplierReport,
+  getIndividualBankReport,
 };
