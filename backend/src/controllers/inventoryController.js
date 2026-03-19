@@ -151,4 +151,73 @@ const getStockTransactions = async (req, res) => {
   return ok(res, { transactions: rows });
 };
 
-module.exports = { getInventory, getLowStock, addStock, adjustStock, getStockTransactions };
+// PUT /api/inventory/:id
+const updateInventory = async (req, res) => {
+  const { factory_id } = req.user;
+  const { id } = req.params;
+  const { product_id, weight_id, quantity } = req.body;
+
+  if (!product_id || !weight_id || quantity === undefined)
+    return fail(res, 'VALIDATION_REQUIRED_FIELD', 'product_id, weight_id and quantity are required');
+  if (quantity < 0)
+    return fail(res, 'VALIDATION_INVALID_FORMAT', 'Quantity cannot be negative');
+
+  try {
+    // Check the row belongs to this factory
+    const [existing] = await db.query(
+      'SELECT id FROM inventory WHERE id = ? AND factory_id = ?', [id, factory_id]
+    );
+    if (!existing[0]) return fail(res, 'NOT_FOUND', 'Inventory record not found', 404);
+
+    await db.query(
+      `UPDATE inventory SET product_id = ?, weight_id = ?, quantity = ? WHERE id = ? AND factory_id = ?`,
+      [product_id, weight_id, quantity, id, factory_id]
+    );
+    return ok(res, { message: 'Inventory updated' });
+  } catch (e) {
+    console.error('updateInventory error:', e);
+    return fail(res, 'SERVER_ERROR', e.message, 500);
+  }
+};
+
+// DELETE /api/inventory/:id
+const deleteInventory = async (req, res) => {
+  const { factory_id } = req.user;
+  const { id } = req.params;
+
+  try {
+    const [existing] = await db.query(
+      'SELECT id FROM inventory WHERE id = ? AND factory_id = ?', [id, factory_id]
+    );
+    if (!existing[0]) return fail(res, 'NOT_FOUND', 'Inventory record not found', 404);
+
+    await db.query('DELETE FROM inventory WHERE id = ? AND factory_id = ?', [id, factory_id]);
+    return ok(res, { message: 'Inventory record deleted' });
+  } catch (e) {
+    console.error('deleteInventory error:', e);
+    return fail(res, 'SERVER_ERROR', e.message, 500);
+  }
+};
+
+// POST /api/inventory/weight — get or create a custom weight
+const getOrCreateWeight = async (req, res) => {
+  const { weight_value, unit = 'kg' } = req.body;
+  if (!weight_value || isNaN(weight_value) || Number(weight_value) <= 0)
+    return fail(res, 'VALIDATION_INVALID_FORMAT', 'Valid weight_value is required');
+
+  try {
+    await db.query(
+      `INSERT INTO bag_weights (weight_value, unit) VALUES (?, ?) ON CONFLICT (weight_value, unit) DO NOTHING`,
+      [weight_value, unit]
+    );
+    const [rows] = await db.query(
+      'SELECT * FROM bag_weights WHERE weight_value = ? AND unit = ?', [weight_value, unit]
+    );
+    return ok(res, { weight: rows[0] });
+  } catch (e) {
+    console.error('getOrCreateWeight error:', e);
+    return fail(res, 'SERVER_ERROR', e.message, 500);
+  }
+};
+
+module.exports = { getInventory, getLowStock, addStock, adjustStock, getStockTransactions, updateInventory, deleteInventory, getOrCreateWeight };

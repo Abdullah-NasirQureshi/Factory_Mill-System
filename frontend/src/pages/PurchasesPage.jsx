@@ -27,6 +27,7 @@ function NewPurchasePage({ onDone }) {
   const [docModal, setDocModal] = useState(null);
   const [qty, setQty] = useState(1);
   const [price, setPrice] = useState('');
+  const [customWeight, setCustomWeight] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -121,7 +122,7 @@ function NewPurchasePage({ onDone }) {
                   <button
                     key={p.id}
                     className={`product-card ${selectedProduct?.id === p.id ? 'selected' : ''}`}
-                    onClick={() => { setSelectedProduct(p); setSelectedWeight(null); }}
+                    onClick={() => { setSelectedProduct(p); setSelectedWeight(null); setCustomWeight(''); }}
                   >
                     {p.name}
                   </button>
@@ -139,11 +140,36 @@ function NewPurchasePage({ onDone }) {
                     <button
                       key={w.id}
                       className={`weight-card ${selectedWeight?.id === w.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedWeight(w)}
+                      onClick={() => { setSelectedWeight(w); setCustomWeight(''); }}
                     >
                       <div className="weight-label">{w.weight_value}{w.unit}</div>
                     </button>
                   ))}
+                </div>
+                <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Custom:</span>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0.1"
+                    step="0.01"
+                    placeholder="e.g. 25"
+                    value={customWeight}
+                    style={{ maxWidth: 110 }}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setCustomWeight(v);
+                      if (v && !isNaN(v) && Number(v) > 0) {
+                        setSelectedWeight({ id: `custom_${v}`, weight_value: Number(v), unit: 'kg' });
+                      } else {
+                        setSelectedWeight(null);
+                      }
+                    }}
+                  />
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>kg</span>
+                  {selectedWeight?.id?.toString().startsWith('custom_') && (
+                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>Custom: {selectedWeight.weight_value}kg</span>
+                  )}
                 </div>
               </div>
             </div>
