@@ -26,6 +26,9 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 - **Payment**: A financial transaction recording money received from customers or paid to suppliers
 - **Transaction**: A central ledger entry recording all financial movements in the system
 - **Payment Allocation**: The process of applying payments to outstanding dues starting from oldest records first
+- **Employee Khata**: An individual ledger for an employee tracking all financial movements between the mill and that employee; outstanding balance = SUM(CREDIT) - SUM(DEBIT)
+- **Khata Debit**: Employee receives value — salary earned (no cash movement) or employee returns cash to mill (cash movement IN)
+- **Khata Credit**: Mill gives cash out to employee — loan advance or salary paid in cash (cash movement OUT)
 
 ## Requirements
 
@@ -427,3 +430,79 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 3. WHEN an accountant filters expenses by group or khata, THE System SHALL display only expenses matching the selected category
 4. WHEN an accountant views the expense table, THE System SHALL show date, group name, khata name, description, payment method, bank name if applicable, and amount for each entry
 5. WHEN an accountant requests an expense report, THE System SHALL aggregate totals by group and khata within the specified date range
+
+---
+
+## Employee Management & Employee Khata System
+
+### Requirement 34
+
+**User Story:** As an admin, I want to add and manage employee records with their personal details and monthly salary, so that I can maintain a complete employee directory for the factory.
+
+#### Acceptance Criteria
+
+1. WHEN an admin creates an employee, THE System SHALL store the employee name, phone number, address, monthly salary amount, factory association, and creation timestamp
+2. WHEN an admin edits an employee, THE System SHALL update the employee record while preserving all historical khata transactions and salary records linked to that employee
+3. WHEN an admin deactivates an employee, THE System SHALL mark the employee as inactive and prevent them from appearing in active employee lists while preserving all historical data
+4. WHEN displaying the employee list, THE System SHALL show employee name, phone number, monthly salary, current outstanding balance (amount employee owes the mill), and active status
+5. WHEN an admin searches for an employee, THE System SHALL filter results in real time by name or phone number
+
+### Requirement 35
+
+**User Story:** As an accountant, I want to view each employee's individual khata (ledger), so that I can track every financial transaction between the mill and that employee with a running outstanding balance.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant views an employee's khata, THE System SHALL display all transactions in chronological order with columns: date, description, debit amount, credit amount, and running outstanding balance
+2. WHEN a DEBIT entry is recorded, THE System SHALL decrease the employee's outstanding balance — debit means the employee receives value (salary earned, or employee returns cash to mill)
+3. WHEN a CREDIT entry is recorded, THE System SHALL increase the employee's outstanding balance — credit means the mill gives cash out to the employee (loan advance, salary paid in cash)
+4. WHEN displaying the running balance, THE System SHALL calculate it as SUM(CREDIT) - SUM(DEBIT) cumulatively so each row shows the balance after that transaction
+5. WHEN the outstanding balance is zero or negative, THE System SHALL display it clearly so the accountant knows the employee has no pending dues
+
+### Requirement 36
+
+**User Story:** As an accountant, I want to manually record debit and credit entries in an employee's khata, so that I can track loans, advances, salary earned, and repayments.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant records a khata entry, THE System SHALL accept entry type (DEBIT or CREDIT), amount, description, and date
+2. WHEN a CREDIT entry is recorded (mill gives cash out — loan or advance), THE System SHALL accept a payment method (CASH or BANK), decrease the cash or bank balance by the entry amount, and increase the employee's outstanding balance
+3. WHEN a DEBIT entry is recorded (employee receives value — salary earned or repayment), THE System SHALL record the entry without a cash/bank movement since no physical cash changes hands for salary-earned debits; for cash repayments the accountant specifies payment method and the cash or bank balance increases
+4. WHEN a khata entry is saved, THE System SHALL create a transaction record in the global payments/ledger with a unique PV-XXXXX voucher number only when actual cash moves (CREDIT entries and cash-repayment DEBIT entries)
+5. WHEN a khata entry is saved, THE System SHALL display the updated running balance immediately
+
+### Requirement 37
+
+**User Story:** As an accountant, I want a dedicated Salary page where I can pay salaries to all employees, so that I can manage payroll in one place and have each payment automatically reflected in the employee's khata.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant opens the Salary page, THE System SHALL display a searchable list of all active employees with their monthly salary and last payment date
+2. WHEN an accountant records a salary payment for an employee, THE System SHALL accept month/year, salary amount (defaulting to the employee's configured monthly salary, editable), payment method (CASH or BANK), and optional notes
+3. WHEN a salary payment is recorded, THE System SHALL decrease the cash or bank balance by the salary amount and automatically post a CREDIT entry in the employee's khata (mill gave cash out)
+4. WHEN a salary payment is recorded, THE System SHALL create a transaction record in the global payments/ledger with type OUT, source type EMPLOYEE, and a unique PV-XXXXX voucher number
+5. WHEN an accountant views salary history for an employee on the Salary page, THE System SHALL display all salary payments for that employee with month, amount, payment method, bank name if applicable, and date recorded
+
+### Requirement 38
+
+**User Story:** As an accountant, I want all employee cash movements to appear in the global Payments/Transactions ledger, so that every financial movement is visible in one place.
+
+#### Acceptance Criteria
+
+1. WHEN a CREDIT khata entry is recorded (mill gives cash out), THE System SHALL create a transaction record with type OUT, source type EMPLOYEE, payment method, amount, and employee name as reference
+2. WHEN a cash-repayment DEBIT khata entry is recorded (employee returns cash), THE System SHALL create a transaction record with type IN, source type EMPLOYEE, payment method, amount, and employee name as reference
+3. WHEN a salary payment is recorded, THE System SHALL create a transaction record with type OUT, source type EMPLOYEE, payment method, amount, and note "Salary: [Month Year]"
+4. WHEN viewing the global transactions/payments page, THE System SHALL display employee transactions alongside customer and supplier transactions with the employee name as the reference
+5. WHEN a PV-XXXXX voucher is generated for an employee transaction, THE System SHALL follow the same sequential numbering used for customer and supplier payment vouchers
+
+### Requirement 39
+
+**User Story:** As an accountant, I want to view a summary of all employees' outstanding balances, so that I can quickly see which employees owe money to the mill and how much.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant views the employee list, THE System SHALL display each employee's current outstanding balance alongside their name and contact details
+2. WHEN an accountant views the employee summary, THE System SHALL show total outstanding across all employees
+3. WHEN an employee's outstanding balance is zero, THE System SHALL display it as zero without hiding the employee from the list
+4. WHEN an accountant clicks on an employee, THE System SHALL navigate to that employee's detail page showing their khata and salary history
+5. WHEN the dashboard is loaded, THE System SHALL include total employee outstanding in the financial summary section

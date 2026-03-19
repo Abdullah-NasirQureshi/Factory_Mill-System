@@ -497,3 +497,84 @@
   - Compute summary card values from the returned expense list (total, cash total, bank total, count)
   - Group/khata filter dropdowns populated from the groups API
   - _Requirements: 33.2, 33.3, 33.5_
+
+---
+
+## Employee Management & Employee Khata System
+
+- [x] 44. Create database tables for employee management
+  - Create `employees` table: id, factory_id, name, phone, address, monthly_salary (DECIMAL 10,2), is_active (BOOLEAN DEFAULT true), created_at
+  - Create `employee_khata_entries` table: id, factory_id, employee_id (FK → employees), entry_type (ENUM DEBIT/CREDIT), amount (DECIMAL 10,2), description, payment_method (ENUM CASH/BANK), bank_id (nullable FK → bank_accounts), entry_date (DATE), transaction_id (nullable FK → transactions), created_by (FK → users), created_at
+  - Create `employee_salary_payments` table: id, factory_id, employee_id (FK → employees), salary_month (DATE — store as first day of month), amount (DECIMAL 10,2), payment_method (ENUM CASH/BANK), bank_id (nullable FK → bank_accounts), notes, transaction_id (nullable FK → transactions), created_by (FK → users), created_at
+  - Add migration script `008_employee_management.sql`
+  - _Requirements: 34.1, 35.1, 37.1_
+
+- [x] 45. Implement backend employee CRUD APIs
+  - `GET /api/employees` — list all employees for the factory (supports ?search= for name/phone filter, ?active=true/false)
+  - `POST /api/employees` — create a new employee (admin only); store name, phone, address, monthly_salary
+  - `PUT /api/employees/:id` — update employee details (admin only)
+  - `DELETE /api/employees/:id` — soft-delete (set is_active = false) if employee has khata entries or salary records; hard-delete otherwise (admin only)
+  - `GET /api/employees/:id` — get single employee with current outstanding balance
+  - _Requirements: 34.1, 34.2, 34.3, 34.4, 34.5_
+
+- [x] 46. Implement backend employee khata entry APIs
+  - `GET /api/employees/:id/khata` — list all khata entries ordered by entry_date ASC, created_at ASC; include running balance column: SUM(CREDIT) - SUM(DEBIT) as a window function
+  - `POST /api/employees/:id/khata` — record a new entry:
+    - CREDIT (mill gives cash out): decrease cash/bank balance, increase outstanding, create OUT transaction record with PV-XXXXX
+    - DEBIT with cash repayment: increase cash/bank balance, decrease outstanding, create IN transaction record with PV-XXXXX
+    - DEBIT for salary-earned (no cash movement): just record the entry, no cash/bank change, no transaction record
+  - `DELETE /api/employees/:id/khata/:entryId` — admin only; reverse cash/bank change if applicable; delete linked transaction record
+  - Outstanding balance formula: SUM(CREDIT amounts) - SUM(DEBIT amounts)
+  - _Requirements: 35.1, 35.2, 35.3, 35.4, 36.1, 36.2, 36.3, 36.4, 38.1, 38.2_
+
+- [x] 47. Implement backend salary payment APIs
+  - `GET /api/salary` — list salary payments for the factory with optional ?employee_id= and ?month= filters; include employee name
+  - `POST /api/employees/:id/salary` — record a salary payment; decrease cash or bank balance; auto-post a CREDIT entry in employee's khata (mill gave cash out); create OUT transaction record with PV-XXXXX and note "Salary: [Month Year]"
+  - `DELETE /api/employees/:id/salary/:paymentId` — admin only; reverse cash/bank balance; delete the linked khata CREDIT entry and transaction record
+  - Validate cash/bank balance does not go negative
+  - _Requirements: 37.1, 37.2, 37.3, 37.4, 37.5, 38.3_
+
+- [x] 48. Integrate employee transactions into global payments/transactions ledger
+  - Ensure `GET /api/transactions` returns employee transactions (source_type = 'EMPLOYEE') alongside customer and supplier transactions
+  - Add employee name to transaction response (JOIN employees table when source_type = 'EMPLOYEE')
+  - Support `?source_type=EMPLOYEE` filter on `GET /api/transactions`
+  - Ensure PV-XXXXX voucher numbers for employee transactions use the same document_sequences counter as customer/supplier payments
+  - _Requirements: 38.1, 38.2, 38.3, 38.4, 38.5_
+
+- [x] 49. Build frontend Employee List page
+  - Create `EmployeesPage.jsx` under `frontend/src/pages/`
+  - Add route `/employees` in `App.jsx` and a sidebar nav link "Employees" (between Expenses and Settings)
+  - Layout: search bar at top, summary card showing total outstanding across all employees, employee table
+  - Employee table columns: Name, Phone, Monthly Salary, Outstanding Balance, Status, Actions (View, Edit, Delete — admin only)
+  - "Add Employee" button (admin only) opens a modal: name, phone, address, monthly salary
+  - Edit employee opens the same form pre-filled
+  - Delete with confirmation dialog; show error if employee has transactions
+  - _Requirements: 34.1, 34.3, 34.4, 34.5, 39.1, 39.2, 39.3_
+
+- [x] 50. Build frontend Employee Detail page (Khata tab)
+  - Create `EmployeeDetailPage.jsx` under `frontend/src/pages/`
+  - Add route `/employees/:id` in `App.jsx`
+  - Page header: employee name, phone, monthly salary, current outstanding balance
+  - Khata entry form: date (default today), entry type toggle (DEBIT / CREDIT), amount, description
+    - CREDIT only: show payment method (CASH/BANK) and bank selector — cash moves out of mill
+    - DEBIT: show optional "cash repayment" toggle; if enabled show payment method — cash comes back to mill; if disabled (salary-earned) no cash movement
+  - Khata table: Date, Description, Debit, Credit, Balance (running) — same style as customer individual report
+  - On submit: call `POST /api/employees/:id/khata`, refresh table and outstanding balance in header
+  - Delete button on each row (admin only) with confirmation
+  - _Requirements: 35.1, 35.2, 35.3, 35.4, 35.5, 36.1, 36.2, 36.3, 36.4, 36.5_
+
+- [x] 51. Build frontend Salary page (separate payroll page)
+  - Create `SalaryPage.jsx` under `frontend/src/pages/`
+  - Add route `/salary` in `App.jsx` and a sidebar nav link "Salary" (next to Employees)
+  - Layout: search bar to find an employee, employee summary card (name, monthly salary, last payment), salary history table for selected employee, salary payment form
+  - Salary payment form: month/year picker, amount (pre-filled with employee's monthly_salary, editable), payment method (CASH/BANK), bank selector if BANK, notes
+  - On submit: call `POST /api/employees/:id/salary`; this auto-posts a CREDIT in the employee's khata and deducts from cash/bank
+  - Salary history table columns: Month, Amount, Method, Bank, Date Recorded, Actions (Delete — admin only)
+  - Delete with confirmation; reverses cash/bank balance and removes linked khata CREDIT entry
+  - _Requirements: 37.1, 37.2, 37.3, 37.4, 37.5_
+
+- [x] 52. Update global Transactions/Payments page and dashboard for employees
+  - Add "Employee" as a source type filter option on TransactionsPage
+  - Ensure employee transactions display employee name in the reference/source column
+  - Add an "Employee Outstanding" summary card to DashboardPage (total across all employees)
+  - _Requirements: 38.3, 38.4, 39.5_

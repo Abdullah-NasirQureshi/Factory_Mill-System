@@ -5,24 +5,27 @@ const { nextDocNumber } = require('../utils/docNumber');
 // GET /api/transactions
 const getTransactions = async (req, res) => {
   const { factory_id } = req.user;
-  const { type, method, from, to } = req.query;
+  const { type, method, from, to, source_type } = req.query;
 
   let sql = `SELECT t.*, ba.bank_name,
                CASE t.source_type
                  WHEN 'CUSTOMER' THEN c.name
                  WHEN 'SUPPLIER' THEN s.name
+                 WHEN 'EMPLOYEE' THEN e.name
                  ELSE 'System'
                END AS source_name
              FROM transactions t
              LEFT JOIN bank_accounts ba ON ba.id = t.bank_id
              LEFT JOIN customers c ON t.source_type = 'CUSTOMER' AND c.id = t.source_id
              LEFT JOIN suppliers s ON t.source_type = 'SUPPLIER' AND s.id = t.source_id
+             LEFT JOIN employees e ON t.source_type = 'EMPLOYEE' AND e.id = t.source_id
              WHERE t.factory_id = ? AND t.is_deleted = FALSE`;
   const params = [factory_id];
-  if (type)   { sql += ' AND t.transaction_type = ?'; params.push(type); }
-  if (method) { sql += ' AND t.payment_method = ?';   params.push(method); }
-  if (from)   { sql += ' AND t.created_at >= ?';      params.push(from); }
-  if (to)     { sql += ' AND t.created_at <= ?';      params.push(to); }
+  if (type)        { sql += ' AND t.transaction_type = ?'; params.push(type); }
+  if (method)      { sql += ' AND t.payment_method = ?';   params.push(method); }
+  if (source_type) { sql += ' AND t.source_type = ?';      params.push(source_type); }
+  if (from)        { sql += ' AND t.created_at >= ?';      params.push(from); }
+  if (to)          { sql += ' AND t.created_at <= ?';      params.push(to); }
   sql += ' ORDER BY t.created_at DESC';
 
   const [rows] = await db.query(sql, params);

@@ -11,15 +11,16 @@ const TYPE_COLORS = {
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ from: '', to: '', type: '', method: '' });
+  const [filters, setFilters] = useState({ from: '', to: '', type: '', method: '', source_type: '' });
 
   const load = () => {
     const params = new URLSearchParams();
-    if (filters.from) params.set('from', filters.from);
-    if (filters.to) params.set('to', filters.to);
-    if (filters.type) params.set('type', filters.type);
-    if (filters.method) params.set('method', filters.method);
-    api.get(`/transactions?${params}`).then(r => setTransactions(r.data.transactions || [])).catch(console.error).finally(() => setLoading(false));
+    if (filters.from)        params.set('from', filters.from);
+    if (filters.to)          params.set('to', filters.to);
+    if (filters.type)        params.set('type', filters.type);
+    if (filters.method)      params.set('method', filters.method);
+    if (filters.source_type) params.set('source_type', filters.source_type);
+    api.get(`/transactions?${params}`).then(r => setTransactions(r.data.data?.transactions || r.data.transactions || [])).catch(console.error).finally(() => setLoading(false));
   };
 
   useEffect(load, []);
@@ -54,6 +55,13 @@ export default function TransactionsPage() {
               <select className="form-select" value={filters.method} onChange={e => setFilters(f => ({ ...f, method: e.target.value }))}>
                 <option value="">All Methods</option>
                 {['CASH', 'BANK', 'NONE'].map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Source</label>
+              <select className="form-select" value={filters.source_type} onChange={e => setFilters(f => ({ ...f, source_type: e.target.value }))}>
+                <option value="">All Sources</option>
+                {['CUSTOMER', 'SUPPLIER', 'EMPLOYEE', 'SYSTEM'].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
