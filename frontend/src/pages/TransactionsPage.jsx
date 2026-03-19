@@ -20,7 +20,7 @@ export default function TransactionsPage() {
     if (filters.type)        params.set('type', filters.type);
     if (filters.method)      params.set('method', filters.method);
     if (filters.source_type) params.set('source_type', filters.source_type);
-    api.get(`/transactions?${params}`).then(r => setTransactions(r.data.data?.transactions || r.data.transactions || [])).catch(console.error).finally(() => setLoading(false));
+    api.get(`/transactions?${params}`).then(r => setTransactions(r.data.transactions || [])).catch(console.error).finally(() => setLoading(false));
   };
 
   useEffect(load, []);

@@ -29,7 +29,7 @@ export default function EmployeesPage() {
       const params = { active: 'true' };
       if (q) params.search = q;
       const res = await api.get('/employees', { params });
-      setEmployees(res.data.data.employees || []);
+      setEmployees(res.data.employees || []);
     } catch { showToast('Failed to load employees', 'error'); }
     finally { setLoading(false); }
   };

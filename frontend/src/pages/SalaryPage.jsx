@@ -85,7 +85,7 @@ export default function SalaryPage() {
 
   useEffect(() => {
     api.get('/employees', { params: { active: 'true' } })
-      .then(r => setEmployees(r.data.data.employees || []))
+      .then(r => setEmployees(r.data.employees || []))
       .catch(() => showToast('Failed to load employees', 'error'));
     api.get('/banks')
       .then(r => setBanks(r.data.data.banks || []))
@@ -97,7 +97,7 @@ export default function SalaryPage() {
     setLoadingHistory(true);
     try {
       const r = await api.get(`/employees/${emp.id}/salary`);
-      setSalaryHistory(r.data.data.payments || []);
+      setSalaryHistory(r.data.payments || []);
     } catch { showToast('Failed to load salary history', 'error'); }
     finally { setLoadingHistory(false); }
   };
@@ -122,7 +122,7 @@ export default function SalaryPage() {
       loadHistory(selectedEmp);
       // Refresh employee list to update outstanding
       const r = await api.get('/employees', { params: { active: 'true' } });
-      const updated = (r.data.data.employees || []);
+      const updated = (r.data.employees || []);
       setEmployees(updated);
       setSelectedEmp(updated.find(e => e.id === selectedEmp.id) || selectedEmp);
     } catch (e) {

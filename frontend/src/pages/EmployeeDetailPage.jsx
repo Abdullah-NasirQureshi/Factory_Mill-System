@@ -27,17 +27,17 @@ export default function EmployeeDetailPage() {
 
   const loadEmployee = async () => {
     const res = await api.get(`/employees/${id}`);
-    setEmployee(res.data.data.employee);
+    setEmployee(res.data.employee);
   };
 
   const loadKhata = async () => {
     const res = await api.get(`/employees/${id}/khata`);
-    setEntries(res.data.data.entries || []);
+    setEntries(res.data.entries || []);
   };
 
   const loadBanks = async () => {
     const res = await api.get('/banks');
-    setBanks(res.data.data.banks || []);
+    setBanks(res.data.banks || []);
   };
 
   useEffect(() => {
