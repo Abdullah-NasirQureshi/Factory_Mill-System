@@ -14,7 +14,7 @@ export default function EmployeeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const showToast = useToast();
   const isAdmin = user?.role === 'ADMIN';
 
   const [employee, setEmployee] = useState(null);

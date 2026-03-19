@@ -64,7 +64,7 @@ function EmployeeCombobox({ employees, value, onChange }) {
 
 export default function SalaryPage() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const showToast = useToast();
   const isAdmin = user?.role === 'ADMIN';
 
   const [employees, setEmployees] = useState([]);
@@ -88,7 +88,7 @@ export default function SalaryPage() {
       .then(r => setEmployees(r.data.employees || []))
       .catch(() => showToast('Failed to load employees', 'error'));
     api.get('/banks')
-      .then(r => setBanks(r.data.data.banks || []))
+      .then(r => setBanks(r.data.banks || []))
       .catch(() => {});
   }, []);
 

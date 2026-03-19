@@ -10,7 +10,7 @@ const EMPTY_FORM = { name: '', phone: '', address: '', monthly_salary: '' };
 
 export default function EmployeesPage() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const showToast = useToast();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'ADMIN';
 
