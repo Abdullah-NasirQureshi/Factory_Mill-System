@@ -20,6 +20,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import ReportsPage from './pages/ReportsPage';
 import FinancePage from './pages/FinancePage';
 import SettingsPage from './pages/SettingsPage';
+import ExpensePage from './pages/ExpensePage';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ function AppRoutes() {
       <Route path="/payments" element={<ProtectedRoute><Layout><PaymentsPage /></Layout></ProtectedRoute>} />
       <Route path="/transactions" element={<ProtectedRoute><Layout><TransactionsPage /></Layout></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Layout><ReportsPage /></Layout></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute><Layout><ExpensePage /></Layout></ProtectedRoute>} />
       <Route path="/finance" element={<ProtectedRoute adminOnly><Layout><FinancePage /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute adminOnly><Layout><SettingsPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

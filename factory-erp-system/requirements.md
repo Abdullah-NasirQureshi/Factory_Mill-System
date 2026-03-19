@@ -390,3 +390,40 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 3. WHEN a reverted transaction's document is requested, THE System SHALL clearly indicate the reverted status on the regenerated document
 4. WHEN generating documents, THE System SHALL NOT store full invoice or voucher content as static files in the database, storing only the structured transaction data required for reconstruction
 5. WHEN a document is downloaded as a PDF, THE System SHALL generate the PDF on demand from current transaction data and deliver it to the user without persisting the PDF file on the server
+
+
+### Requirement 31
+
+**User Story:** As an accountant, I want to manage general business expenses organized by groups and accounts (khatas), so that I can track all non-purchase operational costs in a structured and searchable way.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant views the Expense Manager, THE System SHALL display a list of all recorded expenses with date, group, khata, description, amount, and payment method
+2. WHEN an accountant records a new expense, THE System SHALL accept a group, a khata within that group, a description, an amount, a payment method (CASH or BANK), an optional bank selection, and a date
+3. WHEN an expense is recorded with CASH method, THE System SHALL decrease the cash account balance by the expense amount and create a transaction record
+4. WHEN an expense is recorded with BANK method, THE System SHALL decrease the selected bank account balance by the expense amount and create a transaction record
+5. WHEN an accountant searches for an expense account, THE System SHALL provide a searchable combobox showing entries in "Group → Khata" format for quick selection
+
+### Requirement 32
+
+**User Story:** As an admin, I want to define and manage expense groups and khatas (sub-accounts), so that expenses are categorized consistently across the business.
+
+#### Acceptance Criteria
+
+1. WHEN an admin creates an expense group, THE System SHALL store the group name and factory association
+2. WHEN an admin creates a khata, THE System SHALL store the khata name and associate it with a parent expense group and factory
+3. WHEN displaying the expense account selector, THE System SHALL show all khatas grouped under their parent group in a searchable dropdown
+4. WHEN an admin deactivates an expense group or khata, THE System SHALL prevent it from appearing in new expense entries while preserving historical expense records
+5. WHEN an admin views category management, THE System SHALL display all groups with their associated khatas and allow adding, editing, or deactivating them
+
+### Requirement 33
+
+**User Story:** As an accountant, I want to view expense summaries and filter expense history, so that I can analyze spending patterns by category and date range.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant views the Expense Manager, THE System SHALL display summary cards showing total expenses for the current period, total by payment method (cash vs bank), and count of transactions
+2. WHEN an accountant filters expenses by date range, THE System SHALL display only expenses within the selected from/to dates
+3. WHEN an accountant filters expenses by group or khata, THE System SHALL display only expenses matching the selected category
+4. WHEN an accountant views the expense table, THE System SHALL show date, group name, khata name, description, payment method, bank name if applicable, and amount for each entry
+5. WHEN an accountant requests an expense report, THE System SHALL aggregate totals by group and khata within the specified date range

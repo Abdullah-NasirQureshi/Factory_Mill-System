@@ -435,3 +435,65 @@
   - Test mobile responsiveness
   - Fix any remaining bugs
   - _Requirements: All_
+
+---
+
+## General Expense Manager
+
+- [ ] 36. Create database tables for expense manager
+  - Create `expense_groups` table: id, factory_id, name, is_active, created_at
+  - Create `expense_khatas` table: id, factory_id, group_id (FK → expense_groups), name, is_active, created_at
+  - Create `expenses` table: id, factory_id, group_id, khata_id, description, amount (DECIMAL 10,2), payment_method (ENUM CASH/BANK), bank_id (nullable FK → bank_accounts), expense_date (DATE), created_by (FK → users), created_at
+  - Add migration script and seed a few default groups (e.g., "Utilities", "Salaries", "Maintenance") with sample khatas
+  - _Requirements: 31.2, 32.1, 32.2_
+
+- [ ] 37. Implement backend expense group and khata APIs
+  - `GET /api/expenses/groups` — list all active groups with their khatas for the factory
+  - `POST /api/expenses/groups` — create a new expense group (admin only)
+  - `PUT /api/expenses/groups/:id` — update/deactivate a group (admin only)
+  - `POST /api/expenses/khatas` — create a new khata under a group (admin only)
+  - `PUT /api/expenses/khatas/:id` — update/deactivate a khata (admin only)
+  - _Requirements: 32.1, 32.2, 32.4, 32.5_
+
+- [ ] 38. Implement backend expense CRUD and financial integration
+  - `GET /api/expenses` — list expenses for factory with optional filters (date range, group_id, khata_id)
+  - `POST /api/expenses` — record a new expense; decrease cash or bank balance; create a transaction record (type OUT, source_type SYSTEM)
+  - `DELETE /api/expenses/:id` — soft-delete or hard-delete an expense (admin only); reverse the cash/bank balance change
+  - Validate that cash/bank balance does not go negative on expense recording
+  - _Requirements: 31.2, 31.3, 31.4, 33.1_
+
+- [ ] 39. Build frontend Expense Manager page
+  - Create `ExpensePage.jsx` under `frontend/src/pages/`
+  - Add route `/expenses` in `App.jsx` and a sidebar nav link "Expenses"
+  - Layout: summary cards row at top (Total Expenses, Cash Expenses, Bank Expenses, Count), then filter bar (date from/to, group filter, khata filter), then expense entry form, then expenses table
+  - Summary cards update when filters change
+  - Expense table columns: Date, Group, Khata, Description, Method, Bank, Amount
+  - _Requirements: 31.1, 33.1, 33.2, 33.4_
+
+- [ ] 40. Implement searchable Group → Khata combobox
+  - Create a reusable `ExpenseCombobox` component (or extend existing Combobox pattern)
+  - Fetch groups+khatas from `GET /api/expenses/groups` on mount
+  - Display options as "Group → Khata" in the dropdown list
+  - Support keyboard typing to filter options in real time
+  - On selection, store both `group_id` and `khata_id` in form state
+  - _Requirements: 31.5, 32.3_
+
+- [ ] 41. Implement expense entry form and submission
+  - Form fields: date (default today), Group→Khata combobox, description (text), amount (number), payment method toggle (CASH / BANK), bank selector (shown when BANK selected)
+  - On submit: call `POST /api/expenses`, refresh summary cards and table on success, show toast notification
+  - Client-side validation: amount > 0, khata selected, payment method selected, bank required if BANK
+  - _Requirements: 31.2, 31.3, 31.4_
+
+- [ ] 42. Build frontend category management UI
+  - Add a "Manage Categories" section or modal within ExpensePage (admin only)
+  - List all groups; each group shows its khatas
+  - "Add Group" button → inline form to create a new group
+  - "Add Khata" button per group → inline form to create a khata under that group
+  - Toggle active/inactive for groups and khatas
+  - _Requirements: 32.1, 32.2, 32.4, 32.5_
+
+- [ ] 43. Implement expense filtering and summary aggregation
+  - Wire date-from / date-to inputs to re-fetch `GET /api/expenses?from=&to=&group_id=&khata_id=`
+  - Compute summary card values from the returned expense list (total, cash total, bank total, count)
+  - Group/khata filter dropdowns populated from the groups API
+  - _Requirements: 33.2, 33.3, 33.5_

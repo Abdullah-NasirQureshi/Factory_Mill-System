@@ -28,6 +28,7 @@ app.use('/api/purchases',    require('./routes/purchases'));
 app.use('/api/payments',     require('./routes/payments'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/reports',      require('./routes/reports'));
+app.use('/api/expenses',     require('./routes/expenses'));
 
 // Global error handler
 app.use((err, req, res, next) => {
