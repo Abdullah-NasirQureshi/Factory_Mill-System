@@ -364,6 +364,15 @@ const createSalaryPayment = async (req, res) => {
     );
     const transaction_id = txResult.insertId;
 
+    // Auto-post DEBIT entry (salary earned — no cash movement, offsets the credit)
+    const [, , debitResult] = await conn.query(
+      `INSERT INTO employee_khata_entries
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
+       VALUES (?, ?, 'DEBIT', ?, ?, FALSE, NULL, NULL, CURRENT_DATE, NULL, ?)`,
+      [factory_id, employee_id, amount, `Salary earned: ${monthLabel}`, user_id]
+    );
+    const debit_khata_entry_id = debitResult.insertId;
+
     // Auto-post CREDIT entry in employee's khata (mill gave cash out)
     const [, , khataResult] = await conn.query(
       `INSERT INTO employee_khata_entries
@@ -376,9 +385,9 @@ const createSalaryPayment = async (req, res) => {
     // Record salary payment
     const [, , spResult] = await conn.query(
       `INSERT INTO employee_salary_payments
-         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, transaction_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, transaction_id, user_id]
+         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, debit_khata_entry_id, transaction_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, debit_khata_entry_id, transaction_id, user_id]
     );
 
     await conn.commit();
@@ -414,9 +423,12 @@ const deleteSalaryPayment = async (req, res) => {
       await conn.query('UPDATE bank_accounts SET balance = balance + ? WHERE id = ? AND factory_id = ?', [sp.amount, sp.bank_id, factory_id]);
     }
 
-    // Delete linked khata entry and transaction
+    // Delete linked khata entries (both credit and debit) and transaction
     if (sp.khata_entry_id) {
       await conn.query('DELETE FROM employee_khata_entries WHERE id = ?', [sp.khata_entry_id]);
+    }
+    if (sp.debit_khata_entry_id) {
+      await conn.query('DELETE FROM employee_khata_entries WHERE id = ?', [sp.debit_khata_entry_id]);
     }
     if (sp.transaction_id) {
       await conn.query('DELETE FROM transactions WHERE id = ?', [sp.transaction_id]);
