@@ -240,7 +240,7 @@ const getDashboard = async (req, res) => {
   const { factory_id } = req.user;
   const today = new Date().toISOString().slice(0, 10);
 
-  const [[todaySales], [totalDues], [totalPayables], [cash], [banks], [lowStock]] = await Promise.all([
+  const [[todaySales], [totalDues], [totalPayables], [cash], [banks], [lowStock], [empOutstanding]] = await Promise.all([
     db.query(
       `SELECT COUNT(*) AS bills, COALESCE(SUM(total_amount),0) AS sales, COALESCE(SUM(paid_amount),0) AS collected
        FROM sales WHERE factory_id = ? AND status = 'ACTIVE' AND DATE(created_at) = ?`,
@@ -262,6 +262,11 @@ const getDashboard = async (req, res) => {
        WHERE i.factory_id = ? AND i.quantity <= 10 AND p.status = 'ACTIVE' ORDER BY i.quantity ASC LIMIT 10`,
       [factory_id]
     ),
+    db.query(
+      `SELECT COALESCE(SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE 0 END) - SUM(CASE WHEN entry_type='DEBIT' THEN amount ELSE 0 END), 0) AS total
+       FROM employee_khata_entries WHERE factory_id = ?`,
+      [factory_id]
+    ),
   ]);
 
   const [recentSales] = await db.query(
@@ -275,6 +280,7 @@ const getDashboard = async (req, res) => {
     today: todaySales[0],
     total_dues: totalDues[0]?.total || 0,
     total_payables: totalPayables[0]?.total || 0,
+    employee_outstanding: empOutstanding[0]?.total || 0,
     cash_balance: cash[0]?.balance || 0,
     bank_balances: banks,
     low_stock: lowStock,

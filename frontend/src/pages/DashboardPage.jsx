@@ -50,6 +50,7 @@ export default function DashboardPage() {
         <StatCard label="Today's Sales" value={`Rs ${fmt(today.sales)}`} sub={`${today.bills || 0} bills`} />
         <StatCard label="Customer Dues" value={`Rs ${fmt(data.total_dues)}`} color="var(--danger)" />
         <StatCard label="Supplier Payables" value={`Rs ${fmt(data.total_payables)}`} color="var(--warning)" />
+        <StatCard label="Employee Outstanding" value={`Rs ${fmt(data.employee_outstanding)}`} color={Number(data.employee_outstanding) > 0 ? '#ef4444' : undefined} />
         <StatCard label="Cash Balance" value={`Rs ${fmt(data.cash_balance)}`} />
         {banks.map(b => (
           <StatCard key={b.id} label={b.bank_name} value={`Rs ${fmt(b.balance)}`} />
