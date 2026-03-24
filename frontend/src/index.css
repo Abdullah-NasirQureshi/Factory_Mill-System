@@ -324,21 +324,23 @@ select.form-input { cursor: pointer; }
   .weight-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media print {
-  /* Hide navigation, controls, and action elements */
+  /* Hide everything except the report card */
   .top-nav,
   .sidebar,
   .mobile-nav,
   .no-print,
   .report-tabs,
   .report-controls,
-  .btn { display: none !important; }
+  .btn,
+  .page-header { display: none !important; }
 
-  /* Remove layout margins */
-  .main-content { margin: 0 !important; padding: 12px !important; }
-  body { background: white !important; font-size: 12px; }
+  /* Kill all layout offsets */
+  html, body { margin: 0 !important; padding: 0 !important; background: white !important; font-size: 12px; }
+  .main-content { margin: 0 !important; padding: 8px !important; }
+  .page-container { padding: 0 !important; margin: 0 !important; }
 
   /* Cards print flat */
-  .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; margin: 0 !important; }
   .card-header { border-bottom: 1px solid #ccc !important; }
 
   /* Tables */
@@ -351,10 +353,8 @@ select.form-input { cursor: pointer; }
   /* Summary cards keep background colors */
   .report-summary { display: flex !important; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  /* Show print header */
-  .print-header { display: block !important; margin-bottom: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; }
-  .print-header h2 { font-size: 1.1rem; color: #1e3a5f; margin: 0 0 2px 0; }
-  .print-header p { font-size: 0.8rem; color: #555; margin: 0; }
+  /* Keep colored divs */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* Page breaks */
   .card { page-break-inside: avoid; }

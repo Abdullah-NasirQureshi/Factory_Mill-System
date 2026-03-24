@@ -10,16 +10,22 @@ function printReport(title, company) {
   const name = (company && (company.factory_name || company.company_name)) || "Factory Mill";
   const address = (company && (company.factory_address || company.address)) || "";
   const phone = (company && (company.factory_phone || company.phone)) || "";
+
+  // Inject header into the card-body so it prints at the top of content, not after a blank page
+  const cardBody = document.querySelector(".card-body");
+  if (!cardBody) { window.print(); return; }
+
   const header = document.createElement("div");
   header.id = "__print_header__";
   header.style.cssText = "text-align:center;margin-bottom:16px;border-bottom:2px solid #333;padding-bottom:12px";
   header.innerHTML =
-    "<h2 style='margin:0;font-size:22px'>" + name + "</h2>" +
-    (address ? "<p style='margin:2px 0;font-size:13px'>" + address + "</p>" : "") +
-    (phone ? "<p style='margin:2px 0;font-size:13px'>Phone: " + phone + "</p>" : "") +
-    "<h3 style='margin:8px 0 0;font-size:16px;text-transform:uppercase'>" + title + "</h3>" +
-    "<p style='margin:2px 0;font-size:12px;color:#555'>Printed: " + new Date().toLocaleString("en-PK") + "</p>";
-  document.body.prepend(header);
+    "<h2 style='margin:0;font-size:20px'>" + name + "</h2>" +
+    (address ? "<p style='margin:2px 0;font-size:12px'>" + address + "</p>" : "") +
+    (phone ? "<p style='margin:2px 0;font-size:12px'>Phone: " + phone + "</p>" : "") +
+    "<h3 style='margin:8px 0 0;font-size:14px;text-transform:uppercase'>" + title + "</h3>" +
+    "<p style='margin:2px 0;font-size:11px;color:#555'>Printed: " + new Date().toLocaleString("en-PK") + "</p>";
+
+  cardBody.prepend(header);
   window.print();
   const el = document.getElementById("__print_header__");
   if (el) el.remove();
