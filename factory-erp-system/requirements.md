@@ -506,3 +506,29 @@ This document specifies the requirements for a Factory ERP/Inventory & Billing S
 3. WHEN an employee's outstanding balance is zero, THE System SHALL display it as zero without hiding the employee from the list
 4. WHEN an accountant clicks on an employee, THE System SHALL navigate to that employee's detail page showing their khata and salary history
 5. WHEN the dashboard is loaded, THE System SHALL include total employee outstanding in the financial summary section
+
+---
+
+## Gate Pass System
+
+### Requirement 40
+
+**User Story:** As an accountant, I want to create and manage gate passes for vehicles entering or leaving the factory, so that I can maintain a record of all goods movement with vehicle and driver details.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant creates a gate pass, THE System SHALL store vehicle number, driver name, driver phone, party name (customer or supplier), party type (CUSTOMER/SUPPLIER/OTHER), description of goods, pass type (IN/OUT), date and time, and factory association
+2. WHEN an accountant views the gate pass list, THE System SHALL display all gate passes in a table with columns: GP number, date/time, pass type, vehicle number, driver name, party name, description, and actions
+3. WHEN a gate pass is created, THE System SHALL auto-generate a unique Gate Pass number in the format GP-XXXXX scoped per factory
+4. WHEN an accountant searches gate passes, THE System SHALL support filtering by date range, pass type (IN/OUT), and party name search
+5. WHEN an admin deletes a gate pass, THE System SHALL remove the record with confirmation
+
+### Requirement 41
+
+**User Story:** As an accountant, I want to print gate passes, so that I can hand a physical copy to the driver as an official entry/exit document.
+
+#### Acceptance Criteria
+
+1. WHEN an accountant prints a gate pass, THE System SHALL display company name, GP number, date/time, vehicle number, driver name, driver phone, party name, pass type, and description
+2. WHEN a gate pass is printed, THE System SHALL format it in a compact printable layout with company header and a signature line at the bottom
+3. WHEN viewing a gate pass, THE System SHALL provide a Print button that triggers browser print with print-only CSS

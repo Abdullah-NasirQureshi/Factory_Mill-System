@@ -21,6 +21,7 @@ import ReportsPage from './pages/ReportsPage';
 import FinancePage from './pages/FinancePage';
 import SettingsPage from './pages/SettingsPage';
 import ExpensePage from './pages/ExpensePage';
+import GatePassPage from './pages/GatePassPage';
 import EmployeesPage from './pages/EmployeesPage';
 import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import SalaryPage from './pages/SalaryPage';
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/transactions" element={<ProtectedRoute><Layout><TransactionsPage /></Layout></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Layout><ReportsPage /></Layout></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute><Layout><ExpensePage /></Layout></ProtectedRoute>} />
+      <Route path="/gate-passes" element={<ProtectedRoute><Layout><GatePassPage /></Layout></ProtectedRoute>} />
       <Route path="/employees" element={<ProtectedRoute><Layout><EmployeesPage /></Layout></ProtectedRoute>} />
       <Route path="/employees/:id" element={<ProtectedRoute><Layout><EmployeeDetailPage /></Layout></ProtectedRoute>} />
       <Route path="/salary" element={<ProtectedRoute><Layout><SalaryPage /></Layout></ProtectedRoute>} />

@@ -578,3 +578,29 @@
   - Ensure employee transactions display employee name in the reference/source column
   - Add an "Employee Outstanding" summary card to DashboardPage (total across all employees)
   - _Requirements: 38.3, 38.4, 39.5_
+
+---
+
+## Gate Pass System
+
+- [ ] 53. Create database table for gate passes
+  - Create `gate_passes` table: id, factory_id, gp_number (VARCHAR UNIQUE), pass_type (ENUM IN/OUT), vehicle_number, driver_name, driver_phone, party_type (ENUM CUSTOMER/SUPPLIER/OTHER), party_name, description, pass_date (TIMESTAMPTZ), created_by (FK → users), created_at
+  - Add GP to document_sequences supported types
+  - Add migration script `009_gate_pass.sql`
+  - _Requirements: 40.1, 40.3_
+
+- [ ] 54. Implement backend gate pass APIs
+  - `GET /api/gate-passes` — list all gate passes for factory with optional filters: ?from=, ?to=, ?type=IN/OUT, ?search= (party name / vehicle number)
+  - `POST /api/gate-passes` — create a new gate pass; auto-generate GP-XXXXX number
+  - `DELETE /api/gate-passes/:id` — admin only; hard delete with confirmation
+  - `GET /api/gate-passes/:id` — get single gate pass for print view
+  - _Requirements: 40.1, 40.2, 40.3, 40.4, 40.5_
+
+- [ ] 55. Build frontend Gate Pass page
+  - Create `GatePassPage.jsx` under `frontend/src/pages/`
+  - Add route `/gate-passes` in `App.jsx` and sidebar nav link "Gate Pass" (between Expenses and Employees)
+  - Layout: summary cards (Total Today IN, Total Today OUT), filter bar (date from/to, type IN/OUT, search), "New Gate Pass" button, gate pass table
+  - Gate pass table columns: GP#, Date/Time, Type (IN/OUT badge), Vehicle No, Driver, Party, Description, Actions (Print, Delete)
+  - New Gate Pass modal: pass type toggle (IN/OUT), vehicle number, driver name, driver phone, party type selector (Customer/Supplier/Other), party name, description, date/time (default now)
+  - Print button opens a print-friendly view of the gate pass
+  - _Requirements: 40.1, 40.2, 40.3, 40.4, 40.5, 41.1, 41.2, 41.3_

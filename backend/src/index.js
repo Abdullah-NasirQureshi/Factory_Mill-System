@@ -31,6 +31,7 @@ app.use('/api/reports',      require('./routes/reports'));
 app.use('/api/expenses',     require('./routes/expenses'));
 app.use('/api/employees',    require('./routes/employees'));
 app.use('/api/salary',       require('./routes/salary'));
+app.use('/api/gate-passes',  require('./routes/gatePasses'));
 
 // Global error handler
 app.use((err, req, res, next) => {
