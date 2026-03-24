@@ -13,6 +13,7 @@ const {
   getIndividualCustomerReport,
   getIndividualSupplierReport,
   getIndividualBankReport,
+  getMillReport,
 } = require('../controllers/reportController');
 const { authenticate } = require('../middleware/auth');
 
@@ -29,5 +30,6 @@ router.get('/individual/product',    authenticate, getIndividualProductReport);
 router.get('/individual/customer',   authenticate, getIndividualCustomerReport);
 router.get('/individual/supplier',   authenticate, getIndividualSupplierReport);
 router.get('/individual/bank',       authenticate, getIndividualBankReport);
+router.get('/mill',                  authenticate, getMillReport);
 
 module.exports = router;

@@ -427,6 +427,99 @@ const getIndividualBankReport = async (req, res) => {
   }
 };
 
+// GET /api/reports/mill?from=&to=
+const getMillReport = async (req, res) => {
+  const { factory_id } = req.user;
+  const { from, to } = req.query;
+
+  const dateFilter = (col) => {
+    let clause = '';
+    const p = [];
+    if (from) { clause += ` AND ${col} >= ?`; p.push(from); }
+    if (to)   { clause += ` AND DATE(${col}) <= ?`; p.push(to); }
+    return { clause, p };
+  };
+
+  const sf = dateFilter('s.created_at');
+  const pf = dateFilter('p.created_at');
+  const ef = dateFilter('e.expense_date');
+  const spf = dateFilter('sp.created_at');
+
+  const [[salesRow], [purchasesRow], [expensesRow], [salariesRow], [expenseBreakdown], [expenseByGroup]] = await Promise.all([
+    // Total sales revenue
+    db.query(
+      `SELECT COALESCE(SUM(s.total_amount),0) AS total_sales,
+              COALESCE(SUM(s.paid_amount),0) AS total_collected,
+              COALESCE(SUM(s.remaining_amount),0) AS total_outstanding,
+              COUNT(*) AS total_invoices
+       FROM sales s WHERE s.factory_id = ? AND s.status = 'ACTIVE'${sf.clause}`,
+      [factory_id, ...sf.p]
+    ),
+    // Total purchases
+    db.query(
+      `SELECT COALESCE(SUM(p.total_amount),0) AS total_purchases,
+              COALESCE(SUM(p.paid_amount),0) AS total_paid,
+              COALESCE(SUM(p.remaining_amount),0) AS total_payable,
+              COUNT(*) AS total_invoices
+       FROM purchases p WHERE p.factory_id = ? AND p.status = 'ACTIVE'${pf.clause}`,
+      [factory_id, ...pf.p]
+    ),
+    // Total general expenses
+    db.query(
+      `SELECT COALESCE(SUM(e.amount),0) AS total_expenses, COUNT(*) AS total_count
+       FROM expenses e WHERE e.factory_id = ?${ef.clause}`,
+      [factory_id, ...ef.p]
+    ),
+    // Total salaries paid
+    db.query(
+      `SELECT COALESCE(SUM(sp.amount),0) AS total_salaries, COUNT(*) AS total_payments
+       FROM employee_salary_payments sp WHERE sp.factory_id = ?${spf.clause}`,
+      [factory_id, ...spf.p]
+    ),
+    // Expense breakdown by group
+    db.query(
+      `SELECT eg.name AS group_name, COALESCE(SUM(e.amount),0) AS total
+       FROM expenses e
+       JOIN expense_groups eg ON eg.id = e.group_id
+       WHERE e.factory_id = ?${ef.clause}
+       GROUP BY eg.id, eg.name ORDER BY total DESC`,
+      [factory_id, ...ef.p]
+    ),
+    // Expense breakdown by group+khata
+    db.query(
+      `SELECT eg.name AS group_name, ek.name AS khata_name, COALESCE(SUM(e.amount),0) AS total
+       FROM expenses e
+       JOIN expense_groups eg ON eg.id = e.group_id
+       JOIN expense_khatas ek ON ek.id = e.khata_id
+       WHERE e.factory_id = ?${ef.clause}
+       GROUP BY eg.id, eg.name, ek.id, ek.name ORDER BY eg.name, total DESC`,
+      [factory_id, ...ef.p]
+    ),
+  ]);
+
+  const totalRevenue   = Number(salesRow[0]?.total_sales    || 0);
+  const totalPurchases = Number(purchasesRow[0]?.total_purchases || 0);
+  const totalExpenses  = Number(expensesRow[0]?.total_expenses  || 0);
+  const totalSalaries  = Number(salariesRow[0]?.total_salaries  || 0);
+  const totalProfit    = totalRevenue - totalPurchases - totalExpenses - totalSalaries;
+
+  return ok(res, {
+    summary: {
+      total_revenue:   totalRevenue,
+      total_purchases: totalPurchases,
+      total_expenses:  totalExpenses,
+      total_salaries:  totalSalaries,
+      total_profit:    totalProfit,
+    },
+    sales:    salesRow[0],
+    purchases: purchasesRow[0],
+    expenses:  expensesRow[0],
+    salaries:  salariesRow[0],
+    expense_by_group: expenseBreakdown,
+    expense_by_khata: expenseByGroup,
+  });
+};
+
 module.exports = {
   getDailySalesReport,
   getMonthlySalesReport,
@@ -441,4 +534,5 @@ module.exports = {
   getIndividualCustomerReport,
   getIndividualSupplierReport,
   getIndividualBankReport,
+  getMillReport,
 };

@@ -583,8 +583,200 @@ function BankReport({ company }) {
   );
 }
 
+// ── Mill Report ──────────────────────────────────────────────────────────────
+function MillReport({ company }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    const p = new URLSearchParams();
+    if (from) p.set("from", from);
+    if (to)   p.set("to", to);
+    api.get("/reports/mill?" + p)
+      .then(r => setData(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const s = (data && data.summary) || {};
+  const sales = (data && data.sales) || {};
+  const purchases = (data && data.purchases) || {};
+  const expenses = (data && data.expenses) || {};
+  const salaries = (data && data.salaries) || {};
+  const byGroup = (data && data.expense_by_group) || [];
+  const byKhata = (data && data.expense_by_khata) || [];
+
+  const profitColor = Number(s.total_profit) >= 0 ? "#16a34a" : "#dc2626";
+
+  return (
+    <div>
+      {/* Controls */}
+      <div className="report-controls" style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" }}>
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label">From</label>
+          <input className="form-input" type="date" value={from} onChange={e => setFrom(e.target.value)} />
+        </div>
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label">To</label>
+          <input className="form-input" type="date" value={to} onChange={e => setTo(e.target.value)} />
+        </div>
+        <button className="btn btn-primary" onClick={load}>Load</button>
+        {data && !loading && (
+          <button className="btn btn-secondary no-print" onClick={() => printReport("Mill Report", company)}>🖨 Print</button>
+        )}
+      </div>
+
+      {loading && <div style={{ padding: 24, textAlign: "center" }}>Loading...</div>}
+
+      {!loading && data && (<>
+
+        {/* ── Top Summary Cards ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+          <div style={{ background: "#e8f5e9", borderRadius: 10, padding: "14px 18px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Revenue</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#2e7d32" }}>Rs {fmt(s.total_revenue)}</div>
+          </div>
+          <div style={{ background: "#fce4ec", borderRadius: 10, padding: "14px 18px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Purchases</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#c62828" }}>Rs {fmt(s.total_purchases)}</div>
+          </div>
+          <div style={{ background: "#fff3e0", borderRadius: 10, padding: "14px 18px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>General Expenses</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#e65100" }}>Rs {fmt(s.total_expenses)}</div>
+          </div>
+          <div style={{ background: "#f3e5f5", borderRadius: 10, padding: "14px 18px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Salaries</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#6a1b9a" }}>Rs {fmt(s.total_salaries)}</div>
+          </div>
+          <div style={{ background: Number(s.total_profit) >= 0 ? "#e8f5e9" : "#fce4ec", borderRadius: 10, padding: "14px 18px", border: "2px solid " + profitColor }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Net Profit</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: profitColor }}>Rs {fmt(s.total_profit)}</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Revenue − Purchases − Expenses − Salaries</div>
+          </div>
+        </div>
+
+        {/* ── Sales Section ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, borderBottom: "2px solid #e2e8f0", paddingBottom: 6 }}>
+            Sales
+          </div>
+          <table className="table">
+            <tbody>
+              <tr><td style={{ width: "60%" }}>Total Invoices</td><td style={{ fontWeight: 600 }}>{fmt(sales.total_invoices)}</td></tr>
+              <tr><td>Total Billed (Revenue)</td><td style={{ fontWeight: 600, color: "#2e7d32" }}>Rs {fmt(sales.total_sales)}</td></tr>
+              <tr><td>Total Collected</td><td style={{ fontWeight: 600 }}>Rs {fmt(sales.total_collected)}</td></tr>
+              <tr><td>Outstanding (Receivable)</td><td style={{ fontWeight: 600, color: "#e53935" }}>Rs {fmt(sales.total_outstanding)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Purchases Section ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, borderBottom: "2px solid #e2e8f0", paddingBottom: 6 }}>
+            Purchases
+          </div>
+          <table className="table">
+            <tbody>
+              <tr><td style={{ width: "60%" }}>Total Purchase Invoices</td><td style={{ fontWeight: 600 }}>{fmt(purchases.total_invoices)}</td></tr>
+              <tr><td>Total Purchase Amount</td><td style={{ fontWeight: 600, color: "#c62828" }}>Rs {fmt(purchases.total_purchases)}</td></tr>
+              <tr><td>Total Paid to Suppliers</td><td style={{ fontWeight: 600 }}>Rs {fmt(purchases.total_paid)}</td></tr>
+              <tr><td>Outstanding Payable</td><td style={{ fontWeight: 600, color: "#e53935" }}>Rs {fmt(purchases.total_payable)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── General Expenses Section ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, borderBottom: "2px solid #e2e8f0", paddingBottom: 6 }}>
+            General Expenses
+          </div>
+          <table className="table">
+            <thead><tr><th>Group</th><th style={{ textAlign: "right" }}>Total</th></tr></thead>
+            <tbody>
+              {byGroup.length === 0
+                ? <tr><td colSpan={2} style={{ textAlign: "center", color: "var(--text-muted)" }}>No expenses</td></tr>
+                : byGroup.map((g, i) => (
+                  <tr key={i}>
+                    <td>{g.group_name}</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>Rs {fmt(g.total)}</td>
+                  </tr>
+                ))}
+            </tbody>
+            {byGroup.length > 0 && (
+              <tfoot>
+                <tr style={{ fontWeight: 700 }}>
+                  <td>Total</td>
+                  <td style={{ textAlign: "right", color: "#e65100" }}>Rs {fmt(expenses.total_expenses)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+
+          {/* Khata breakdown */}
+          {byKhata.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--text-muted)", marginBottom: 8 }}>
+                Show breakdown by khata
+              </summary>
+              <table className="table" style={{ fontSize: 13 }}>
+                <thead><tr><th>Group</th><th>Khata</th><th style={{ textAlign: "right" }}>Total</th></tr></thead>
+                <tbody>
+                  {byKhata.map((k, i) => (
+                    <tr key={i}>
+                      <td style={{ color: "var(--text-muted)" }}>{k.group_name}</td>
+                      <td>{k.khata_name}</td>
+                      <td style={{ textAlign: "right" }}>Rs {fmt(k.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          )}
+        </div>
+
+        {/* ── Salaries Section ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, borderBottom: "2px solid #e2e8f0", paddingBottom: 6 }}>
+            Salaries
+          </div>
+          <table className="table">
+            <tbody>
+              <tr><td style={{ width: "60%" }}>Total Salary Payments</td><td style={{ fontWeight: 600 }}>{fmt(salaries.total_payments)}</td></tr>
+              <tr><td>Total Salaries Paid</td><td style={{ fontWeight: 600, color: "#6a1b9a" }}>Rs {fmt(salaries.total_salaries)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Profit Summary ── */}
+        <div style={{ background: Number(s.total_profit) >= 0 ? "#f0fdf4" : "#fff1f2", border: "2px solid " + profitColor, borderRadius: 10, padding: "16px 20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Profit & Loss Summary</div>
+          <table className="table">
+            <tbody>
+              <tr><td style={{ width: "60%" }}>Total Revenue</td><td style={{ fontWeight: 600, color: "#2e7d32" }}>+ Rs {fmt(s.total_revenue)}</td></tr>
+              <tr><td>Total Purchases</td><td style={{ fontWeight: 600, color: "#c62828" }}>− Rs {fmt(s.total_purchases)}</td></tr>
+              <tr><td>General Expenses</td><td style={{ fontWeight: 600, color: "#e65100" }}>− Rs {fmt(s.total_expenses)}</td></tr>
+              <tr><td>Salaries Paid</td><td style={{ fontWeight: 600, color: "#6a1b9a" }}>− Rs {fmt(s.total_salaries)}</td></tr>
+              <tr style={{ borderTop: "2px solid " + profitColor }}>
+                <td style={{ fontWeight: 800, fontSize: 15 }}>Net Profit</td>
+                <td style={{ fontWeight: 800, fontSize: 18, color: profitColor }}>Rs {fmt(s.total_profit)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </>)}
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 const TABS = [
+  "Mill Report",
   "Daily Sales", "Monthly Sales", "By Product", "Inventory",
   "Customer Dues", "Supplier Payables", "Cash Flow",
   "By Product (Individual)", "By Customer", "By Supplier", "By Bank",
@@ -596,6 +788,7 @@ export default function ReportsPage() {
   useEffect(() => { api.get("/settings").then(r => { const d = r.data; setCompany((d && d.settings) || d || null); }).catch(() => {}); }, []);
 
   const components = [
+    <MillReport key="mill" company={company} />,
     <DailySalesReport key="daily" company={company} />,
     <MonthlySalesReport key="monthly" company={company} />,
     <SalesByProductReport key="byproduct" company={company} />,
