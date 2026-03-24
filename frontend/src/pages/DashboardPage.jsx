@@ -53,7 +53,7 @@ export default function DashboardPage() {
         <StatCard label="Employee Outstanding" value={`Rs ${fmt(data.employee_outstanding)}`} color={Number(data.employee_outstanding) > 0 ? '#ef4444' : undefined} />
         <StatCard label="Cash Balance" value={`Rs ${fmt(data.cash_balance)}`} />
         {banks.map(b => (
-          <StatCard key={b.id} label={b.bank_name} value={`Rs ${fmt(b.balance)}`} />
+          <StatCard key={b.id} label={b.bank_name} value={`Rs ${fmt(b.balance)}`} sub={b.account_title} />
         ))}
       </div>
 

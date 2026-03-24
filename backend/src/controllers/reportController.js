@@ -255,7 +255,7 @@ const getDashboard = async (req, res) => {
       [factory_id]
     ),
     db.query('SELECT balance FROM cash_accounts WHERE factory_id = ?', [factory_id]),
-    db.query('SELECT id, bank_name, balance FROM bank_accounts WHERE factory_id = ? AND is_deleted = FALSE', [factory_id]),
+    db.query('SELECT id, bank_name, account_title, balance FROM bank_accounts WHERE factory_id = ? AND is_deleted = FALSE', [factory_id]),
     db.query(
       `SELECT i.quantity, p.name AS product_name, bw.weight_value, bw.unit
        FROM inventory i JOIN products p ON p.id = i.product_id JOIN bag_weights bw ON bw.id = i.weight_id
