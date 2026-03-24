@@ -295,29 +295,57 @@ const getIndividualProductReport = async (req, res) => {
     const { product_id, from, to } = req.query;
     if (!product_id) return res.status(400).json({ success: false, error: { message: 'product_id is required' } });
 
-    let sql = `SELECT si.quantity, si.price, si.total,
-                      bw.weight_value, bw.unit,
-                      sal.invoice_number, sal.created_at,
-                      c.name AS customer_name
-               FROM sale_items si
-               JOIN sales sal ON sal.id = si.sale_id
-               JOIN bag_weights bw ON bw.id = si.weight_id
-               JOIN customers c ON c.id = sal.customer_id
-               WHERE sal.factory_id = ? AND sal.status = 'ACTIVE' AND si.product_id = ?`;
-    const params = [factory_id, product_id];
-    if (from) { sql += ' AND sal.created_at >= ?'; params.push(from); }
-    if (to)   { sql += ' AND DATE(sal.created_at) <= ?'; params.push(to); }
-    sql += ' ORDER BY sal.created_at DESC';
+    // Get product name for purchase lookup
+    const [prodRows] = await db.query('SELECT name FROM products WHERE id = ? AND factory_id = ?', [product_id, factory_id]);
+    const productName = prodRows[0]?.name || '';
 
-    const [rows] = await db.query(sql, params);
+    // ── Sales query ──
+    let salesSql = `SELECT si.quantity, si.price, si.total,
+                           bw.weight_value, bw.unit,
+                           sal.invoice_number, sal.created_at,
+                           c.name AS customer_name
+                    FROM sale_items si
+                    JOIN sales sal ON sal.id = si.sale_id
+                    JOIN bag_weights bw ON bw.id = si.weight_id
+                    JOIN customers c ON c.id = sal.customer_id
+                    WHERE sal.factory_id = ? AND sal.status = 'ACTIVE' AND si.product_id = ?`;
+    const salesParams = [factory_id, product_id];
+    if (from) { salesSql += ' AND sal.created_at >= ?'; salesParams.push(from); }
+    if (to)   { salesSql += ' AND DATE(sal.created_at) <= ?'; salesParams.push(to); }
+    salesSql += ' ORDER BY sal.created_at DESC';
 
-    const summary = {
-      total_invoices: new Set(rows.map(r => r.invoice_number)).size,
-      total_quantity: rows.reduce((acc, r) => acc + Number(r.quantity || 0), 0),
-      total_revenue:  rows.reduce((acc, r) => acc + Number(r.total || 0), 0),
+    // ── Purchases query (match by product_name ILIKE) ──
+    let purchSql = `SELECT pi.product_name, pi.quantity, pi.unit_price, pi.total,
+                           p.invoice_number, p.purchase_date, p.created_at,
+                           s.name AS supplier_name
+                    FROM purchase_items pi
+                    JOIN purchases p ON p.id = pi.purchase_id
+                    JOIN suppliers s ON s.id = p.supplier_id
+                    WHERE p.factory_id = ? AND p.status = 'ACTIVE'
+                      AND pi.product_name ILIKE ?`;
+    const purchParams = [factory_id, `%${productName}%`];
+    if (from) { purchSql += ' AND p.created_at >= ?'; purchParams.push(from); }
+    if (to)   { purchSql += ' AND DATE(p.created_at) <= ?'; purchParams.push(to); }
+    purchSql += ' ORDER BY p.created_at DESC';
+
+    const [[salesRows], [purchRows]] = await Promise.all([
+      db.query(salesSql, salesParams),
+      db.query(purchSql, purchParams),
+    ]);
+
+    const salesSummary = {
+      total_invoices: new Set(salesRows.map(r => r.invoice_number)).size,
+      total_quantity: salesRows.reduce((acc, r) => acc + Number(r.quantity || 0), 0),
+      total_revenue:  salesRows.reduce((acc, r) => acc + Number(r.total || 0), 0),
     };
 
-    return ok(res, { sales: rows, summary });
+    const purchSummary = {
+      total_invoices:  new Set(purchRows.map(r => r.invoice_number)).size,
+      total_quantity:  purchRows.reduce((acc, r) => acc + Number(r.quantity || 0), 0),
+      total_cost:      purchRows.reduce((acc, r) => acc + Number(r.total || 0), 0),
+    };
+
+    return ok(res, { sales: salesRows, summary: salesSummary, purchases: purchRows, purchase_summary: purchSummary, product_name: productName });
   } catch (err) {
     console.error('getIndividualProductReport error:', err);
     return res.status(500).json({ success: false, error: { message: err.message } });

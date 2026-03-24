@@ -341,8 +341,10 @@ function ProductReport({ company }) {
       .finally(() => setLoading(false));
   };
 
-  const rows = (data && data.sales) || [];
+  const salesRows = (data && data.sales) || [];
   const summary = (data && data.summary) || {};
+  const purchRows = (data && data.purchases) || [];
+  const purchSummary = (data && data.purchase_summary) || {};
   const productName = (products.find(p => String(p.id) === String(productId)) || {}).name || "";
 
   return (
@@ -363,16 +365,67 @@ function ProductReport({ company }) {
       {error && <div className="alert alert-danger">{error}</div>}
       {loading && <div style={{ padding: 24, textAlign: "center" }}>Loading...</div>}
       {!loading && data && (<>
-        <div className="report-summary" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-          <SummaryCard label="Total Invoices" value={summary.total_invoices} />
-          <SummaryCard label="Total Bags Sold" value={summary.total_quantity} />
-          <SummaryCard label="Total Revenue" value={summary.total_revenue} color="#e8f5e9" />
+
+        {/* ── Combined summary cards ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
+          <div style={{ background: "#fce4ec", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Purchase Invoices</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#c62828" }}>{fmt(purchSummary.total_invoices)}</div>
+          </div>
+          <div style={{ background: "#fce4ec", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Bags Purchased</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#c62828" }}>{fmt(purchSummary.total_quantity)}</div>
+          </div>
+          <div style={{ background: "#fce4ec", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Purchase Cost</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#c62828" }}>Rs {fmt(purchSummary.total_cost)}</div>
+          </div>
+          <div style={{ background: "#e8f5e9", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Sale Invoices</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#2e7d32" }}>{fmt(summary.total_invoices)}</div>
+          </div>
+          <div style={{ background: "#e8f5e9", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Bags Sold</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#2e7d32" }}>{fmt(summary.total_quantity)}</div>
+          </div>
+          <div style={{ background: "#e8f5e9", borderRadius: 8, padding: "12px 16px" }}>
+            <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>Total Revenue</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#2e7d32" }}>Rs {fmt(summary.total_revenue)}</div>
+          </div>
         </div>
-        <table className="table"><thead><tr><th>#</th><th>Invoice</th><th>Customer</th><th>Weight</th><th>Qty</th><th>Price</th><th>Total</th><th>Date</th></tr></thead>
-          <tbody>{rows.length === 0 ? <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)" }}>No sales found</td></tr>
-            : rows.map((r, i) => (<tr key={i}><td>{i+1}</td><td>{r.invoice_number}</td><td>{r.customer_name}</td><td>{r.weight_value} {r.unit}</td><td>{fmt(r.quantity)}</td><td>Rs {fmt(r.price)}</td><td>Rs {fmt(r.total)}</td><td>{fmtDate(r.created_at)}</td></tr>))}
+
+        {/* ── Purchases table ── */}
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: "#c62828" }}>Purchases</div>
+        <table className="table" style={{ marginBottom: 24 }}>
+          <thead><tr><th>#</th><th>Invoice</th><th>Supplier</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Date</th></tr></thead>
+          <tbody>
+            {purchRows.length === 0
+              ? <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)" }}>No purchases found</td></tr>
+              : purchRows.map((r, i) => (
+                <tr key={i}><td>{i+1}</td><td>{r.invoice_number}</td><td>{r.supplier_name}</td>
+                  <td>{fmt(r.quantity)}</td><td>Rs {fmt(r.unit_price)}</td>
+                  <td>Rs {fmt(r.total)}</td><td>{fmtDate(r.purchase_date || r.created_at)}</td>
+                </tr>
+              ))}
           </tbody>
-          {rows.length > 0 && <tfoot><tr style={{ fontWeight: 700 }}><td colSpan={4}>Total</td><td>{fmt(summary.total_quantity)}</td><td></td><td>Rs {fmt(summary.total_revenue)}</td><td></td></tr></tfoot>}
+          {purchRows.length > 0 && <tfoot><tr style={{ fontWeight: 700 }}><td colSpan={3}>Total</td><td>{fmt(purchSummary.total_quantity)}</td><td></td><td>Rs {fmt(purchSummary.total_cost)}</td><td></td></tr></tfoot>}
+        </table>
+
+        {/* ── Sales table ── */}
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: "#2e7d32" }}>Sales</div>
+        <table className="table">
+          <thead><tr><th>#</th><th>Invoice</th><th>Customer</th><th>Weight</th><th>Qty</th><th>Price</th><th>Total</th><th>Date</th></tr></thead>
+          <tbody>
+            {salesRows.length === 0
+              ? <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--text-muted)" }}>No sales found</td></tr>
+              : salesRows.map((r, i) => (
+                <tr key={i}><td>{i+1}</td><td>{r.invoice_number}</td><td>{r.customer_name}</td>
+                  <td>{r.weight_value} {r.unit}</td><td>{fmt(r.quantity)}</td>
+                  <td>Rs {fmt(r.price)}</td><td>Rs {fmt(r.total)}</td><td>{fmtDate(r.created_at)}</td>
+                </tr>
+              ))}
+          </tbody>
+          {salesRows.length > 0 && <tfoot><tr style={{ fontWeight: 700 }}><td colSpan={4}>Total</td><td>{fmt(summary.total_quantity)}</td><td></td><td>Rs {fmt(summary.total_revenue)}</td><td></td></tr></tfoot>}
         </table>
       </>)}
     </div>
