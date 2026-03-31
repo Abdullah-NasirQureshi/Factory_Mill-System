@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 CREATE TABLE IF NOT EXISTS document_sequences (
   id            SERIAL PRIMARY KEY,
   factory_id    INT NOT NULL REFERENCES factories(id),
-  document_type VARCHAR(5) NOT NULL CHECK (document_type IN ('SI','PI','PV','JV')),
+  document_type VARCHAR(5) NOT NULL CHECK (document_type IN ('SI','PI','PV','JV','GP')),
   last_sequence INT DEFAULT 0,
   UNIQUE (factory_id, document_type)
 );
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   factory_id       INT NOT NULL REFERENCES factories(id),
   voucher_number   VARCHAR(50) UNIQUE,
   transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('IN','OUT','ADJUST','REVERSAL')),
-  source_type      VARCHAR(10) NOT NULL CHECK (source_type IN ('CUSTOMER','SUPPLIER','SYSTEM')),
+  source_type      VARCHAR(10) NOT NULL CHECK (source_type IN ('CUSTOMER','SUPPLIER','SYSTEM','EMPLOYEE','EXPENSE','SALARY')),
   source_id        INT,
   payment_method   VARCHAR(10) NOT NULL CHECK (payment_method IN ('CASH','BANK','NONE')),
   bank_id          INT REFERENCES bank_accounts(id),
