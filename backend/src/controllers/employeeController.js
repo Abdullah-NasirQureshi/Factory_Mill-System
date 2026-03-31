@@ -253,12 +253,18 @@ const deleteKhataEntry = async (req, res) => {
       } else {
         await conn.query('UPDATE bank_accounts SET balance = balance + ? WHERE id = ? AND factory_id = ?', [delta, entry.bank_id, factory_id]);
       }
+      // Null out FK reference before deleting the transaction
       if (entry.transaction_id) {
-        await conn.query('DELETE FROM transactions WHERE id = ?', [entry.transaction_id]);
+        await conn.query('UPDATE employee_khata_entries SET transaction_id = NULL WHERE transaction_id = ?', [entry.transaction_id]);
       }
     }
 
     await conn.query('DELETE FROM employee_khata_entries WHERE id = ?', [entryId]);
+
+    // Now safe to delete the transaction (no FK references remain)
+    if (entry.has_cash_movement && entry.transaction_id) {
+      await conn.query('DELETE FROM transactions WHERE id = ?', [entry.transaction_id]);
+    }
     await conn.commit();
     return ok(res, { message: 'Entry deleted and balance reversed' });
   } catch (e) {
