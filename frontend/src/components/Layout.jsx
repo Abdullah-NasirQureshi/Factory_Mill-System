@@ -66,7 +66,7 @@ export default function Layout({ children }) {
             <rect x="4" y="4" width="10" height="10" rx="2"/><rect x="18" y="4" width="10" height="10" rx="2"/>
             <rect x="4" y="18" width="10" height="10" rx="2"/><rect x="18" y="18" width="10" height="10" rx="2"/>
           </svg>
-          MillFlow
+          MillFlow ERP
         </a>
         <div className="nav-actions">
           <div className="user-menu" onClick={() => go(user?.role === 'ADMIN' ? '/settings' : '/')}>
