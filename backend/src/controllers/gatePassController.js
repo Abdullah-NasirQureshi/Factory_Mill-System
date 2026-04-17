@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 const getGatePasses = async (req, res) => {
   const { factory_id } = req.user;
@@ -48,11 +49,12 @@ const createGatePass = async (req, res) => {
   try {
     await conn.beginTransaction();
     const gp = await nextDocNumber(conn, factory_id, 'GP');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [result] = await conn.query(
-      `INSERT INTO gate_passes (factory_id, gp_number, pass_type, vehicle_number, driver_name, driver_phone, party_type, party_name, description, pass_date, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO gate_passes (factory_id, gp_number, pass_type, vehicle_number, driver_name, driver_phone, party_type, party_name, description, pass_date, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, gp, pass_type, vehicle_number || null, driver_name || null, driver_phone || null,
-       party_type, party_name, description || null, pass_date || new Date(), user_id]
+       party_type, party_name, description || null, pass_date || new Date(), user_id, season_id]
     );
     await conn.commit();
     return ok(res, { gate_pass: { id: result.insertId, gp_number: gp } }, 201);

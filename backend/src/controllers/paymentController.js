@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
 const { allocatePayment } = require('../utils/allocate');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // POST /api/payments/customer
 const recordCustomerPayment = async (req, res) => {
@@ -28,10 +29,11 @@ const recordCustomerPayment = async (req, res) => {
     if (!cust[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Customer not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [payRows] = await conn.query(
-      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
-       VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id]
+      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by, season_id)
+       VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id, season_id]
     );
     const payment_id = payRows[0].id;
 
@@ -47,9 +49,9 @@ const recordCustomerPayment = async (req, res) => {
 
     // ledger entry
     await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes)
-       VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, customer_id, payment_method, bank_id || null, amount, payment_id, notes || null]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes, season_id)
+       VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, customer_id, payment_method, bank_id || null, amount, payment_id, notes || null, season_id]
     );
 
     await conn.commit();
@@ -88,10 +90,11 @@ const recordSupplierPayment = async (req, res) => {
     if (!sup[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Supplier not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [payRows2] = await conn.query(
-      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
-       VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id]
+      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by, season_id)
+       VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id, season_id]
     );
     const payment_id = payRows2[0].id;
 
@@ -104,9 +107,9 @@ const recordSupplierPayment = async (req, res) => {
     }
 
     await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes)
-       VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, supplier_id, payment_method, bank_id || null, amount, payment_id, notes || null]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes, season_id)
+       VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, supplier_id, payment_method, bank_id || null, amount, payment_id, notes || null, season_id]
     );
 
     await conn.commit();

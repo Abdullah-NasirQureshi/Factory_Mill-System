@@ -30,8 +30,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Called after a season rollover so UI reflects new season immediately
+  const refreshUser = async () => {
+    const res = await api.get('/auth/me');
+    setUser(res.data.user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,6 +18,13 @@ const login = async (req, res) => {
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) return fail(res, 'AUTH_INVALID_CREDENTIALS', 'Invalid username or password', 401);
 
+  // Fetch active season
+  const [seasonRows] = await db.query(
+    'SELECT id, name FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [user.factory_id]
+  );
+  const activeSeason = seasonRows[0] || null;
+
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role, factory_id: user.factory_id },
     process.env.JWT_SECRET,
@@ -26,7 +33,11 @@ const login = async (req, res) => {
 
   return ok(res, {
     token,
-    user: { id: user.id, username: user.username, role: user.role, factory_id: user.factory_id, factory_name: user.factory_name },
+    user: {
+      id: user.id, username: user.username, role: user.role,
+      factory_id: user.factory_id, factory_name: user.factory_name,
+      active_season: activeSeason,
+    },
   });
 };
 
@@ -36,7 +47,12 @@ const me = async (req, res) => {
     [req.user.id]
   );
   if (!rows[0]) return fail(res, 'NOT_FOUND', 'User not found', 404);
-  return ok(res, { user: rows[0] });
+
+  const [seasonRows] = await db.query(
+    'SELECT id, name FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [rows[0].factory_id]
+  );
+  return ok(res, { user: { ...rows[0], active_season: seasonRows[0] || null } });
 };
 
 module.exports = { login, me };

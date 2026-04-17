@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // ─── EMPLOYEE CRUD ────────────────────────────────────────────────────────────
 
@@ -178,6 +179,7 @@ const createKhataEntry = async (req, res) => {
     await conn.beginTransaction();
 
     let transaction_id = null;
+    const season_id = await getActiveSeasonId(conn, factory_id);
 
     if (needsCash) {
       if (payment_method === 'CASH') {
@@ -202,21 +204,21 @@ const createKhataEntry = async (req, res) => {
       const pv = await nextDocNumber(conn, factory_id, 'PV');
       const txType = entry_type === 'CREDIT' ? 'OUT' : 'IN';
       const [, , txResult] = await conn.query(
-        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes)
-         VALUES (?, ?, 'EMPLOYEE', ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes, season_id)
+         VALUES (?, ?, 'EMPLOYEE', ?, ?, ?, ?, ?, ?, ?)`,
         [factory_id, txType, employee_id, payment_method, bank_id || null, amount, pv,
-         description || (entry_type === 'CREDIT' ? 'Employee advance/loan' : 'Employee cash repayment')]
+         description || (entry_type === 'CREDIT' ? 'Employee advance/loan' : 'Employee cash repayment'), season_id]
       );
       transaction_id = txResult.insertId;
     }
 
     const [, , entryResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, employee_id, entry_type, amount, description || null,
        needsCash, needsCash ? payment_method : null, needsCash ? (bank_id || null) : null,
-       entry_date || new Date().toISOString().slice(0, 10), transaction_id, user_id]
+       entry_date || new Date().toISOString().slice(0, 10), transaction_id, user_id, season_id]
     );
 
     await conn.commit();
@@ -362,38 +364,39 @@ const createSalaryPayment = async (req, res) => {
 
     // Create transaction record with PV number
     const pv = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const txNote = `Salary: ${monthLabel}${notes ? ' — ' + notes : ''}`;
     const [, , txResult] = await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes)
-       VALUES (?, 'OUT', 'EMPLOYEE', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, employee_id, payment_method, bank_id || null, amount, pv, txNote]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes, season_id)
+       VALUES (?, 'OUT', 'EMPLOYEE', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, employee_id, payment_method, bank_id || null, amount, pv, txNote, season_id]
     );
     const transaction_id = txResult.insertId;
 
     // Auto-post DEBIT entry (salary earned — no cash movement, offsets the credit)
     const [, , debitResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, 'DEBIT', ?, ?, FALSE, NULL, NULL, CURRENT_DATE, NULL, ?)`,
-      [factory_id, employee_id, amount, `Salary earned: ${monthLabel}`, user_id]
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, 'DEBIT', ?, ?, FALSE, NULL, NULL, CURRENT_DATE, NULL, ?, ?)`,
+      [factory_id, employee_id, amount, `Salary earned: ${monthLabel}`, user_id, season_id]
     );
     const debit_khata_entry_id = debitResult.insertId;
 
     // Auto-post CREDIT entry in employee's khata (mill gave cash out)
     const [, , khataResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, 'CREDIT', ?, ?, TRUE, ?, ?, CURRENT_DATE, ?, ?)`,
-      [factory_id, employee_id, amount, `Salary paid: ${monthLabel}`, payment_method, bank_id || null, transaction_id, user_id]
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, 'CREDIT', ?, ?, TRUE, ?, ?, CURRENT_DATE, ?, ?, ?)`,
+      [factory_id, employee_id, amount, `Salary paid: ${monthLabel}`, payment_method, bank_id || null, transaction_id, user_id, season_id]
     );
     const khata_entry_id = khataResult.insertId;
 
     // Record salary payment
     const [, , spResult] = await conn.query(
       `INSERT INTO employee_salary_payments
-         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, debit_khata_entry_id, transaction_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, debit_khata_entry_id, transaction_id, user_id]
+         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, debit_khata_entry_id, transaction_id, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, debit_khata_entry_id, transaction_id, user_id, season_id]
     );
 
     await conn.commit();

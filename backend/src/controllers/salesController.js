@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // POST /api/sales
 const createSale = async (req, res) => {
@@ -52,11 +53,14 @@ const createSale = async (req, res) => {
     // generate invoice number
     const invoice_number = await nextDocNumber(conn, factory_id, 'SI');
 
+    // get active season
+    const season_id = await getActiveSeasonId(conn, factory_id);
+
     // insert sale
     const [saleRows] = await conn.query(
-      `INSERT INTO sales (factory_id, customer_id, invoice_number, total_amount, paid_amount, remaining_amount, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [factory_id, customer_id, invoice_number, total_amount, paid, remaining, user_id]
+      `INSERT INTO sales (factory_id, customer_id, invoice_number, total_amount, paid_amount, remaining_amount, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, customer_id, invoice_number, total_amount, paid, remaining, user_id, season_id]
     );
     const sale_id = saleRows[0].id;
 
@@ -71,9 +75,9 @@ const createSale = async (req, res) => {
         [item.quantity, factory_id, item.product_id, item.weight_id]
       );
       await conn.query(
-        `INSERT INTO stock_transactions (factory_id, product_id, weight_id, type, quantity, reference_id)
-         VALUES (?, ?, ?, 'SALE', ?, ?)`,
-        [factory_id, item.product_id, item.weight_id, item.quantity, sale_id]
+        `INSERT INTO stock_transactions (factory_id, product_id, weight_id, type, quantity, reference_id, season_id)
+         VALUES (?, ?, ?, 'SALE', ?, ?, ?)`,
+        [factory_id, item.product_id, item.weight_id, item.quantity, sale_id, season_id]
       );
     }
 
@@ -81,9 +85,9 @@ const createSale = async (req, res) => {
     if (paid > 0) {
       const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
       const [payRows] = await conn.query(
-        `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, created_by)
-         VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?)`,
-        [factory_id, voucher_number, customer_id, payment_method, bank_id || null, paid, user_id]
+        `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, created_by, season_id)
+         VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
+        [factory_id, voucher_number, customer_id, payment_method, bank_id || null, paid, user_id, season_id]
       );
       await conn.query(
         `INSERT INTO payment_allocations (payment_id, reference_type, reference_id, allocated_amount)
@@ -100,9 +104,9 @@ const createSale = async (req, res) => {
 
       // ledger entry
       await conn.query(
-        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id)
-         VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?)`,
-        [factory_id, customer_id, payment_method, bank_id || null, paid, payRows[0].id]
+        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, season_id)
+         VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?, ?)`,
+        [factory_id, customer_id, payment_method, bank_id || null, paid, payRows[0].id, season_id]
       );
     }
 
