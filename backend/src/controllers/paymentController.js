@@ -127,6 +127,12 @@ const recordSupplierPayment = async (req, res) => {
 const getPayments = async (req, res) => {
   const { factory_id } = req.user;
   const { type, from, to } = req.query;
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
   let sql = `SELECT pay.*, ba.bank_name,
              CASE WHEN pay.type = 'CUSTOMER_PAYMENT' THEN c.name ELSE s.name END AS party_name
              FROM payments pay
@@ -135,6 +141,7 @@ const getPayments = async (req, res) => {
              LEFT JOIN suppliers s ON pay.type = 'SUPPLIER_PAYMENT' AND s.id = pay.reference_id
              WHERE pay.factory_id = ?`;
   const params = [factory_id];
+  if (season_id) { sql += ' AND pay.season_id = ?'; params.push(season_id); }
   if (type) { sql += ' AND pay.type = ?'; params.push(type); }
   if (from) { sql += ' AND pay.created_at >= ?'; params.push(from); }
   if (to)   { sql += ' AND pay.created_at <= ?'; params.push(to); }

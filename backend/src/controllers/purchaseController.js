@@ -96,13 +96,20 @@ const createPurchase = async (req, res) => {
 const getPurchases = async (req, res) => {
   const { factory_id } = req.user;
   const { supplier_id, from, to, status } = req.query;
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
   let sql = `SELECT p.*, s.name AS supplier_name FROM purchases p
              JOIN suppliers s ON s.id = p.supplier_id WHERE p.factory_id = ?`;
   const params = [factory_id];
-  if (supplier_id) { sql += ' AND p.supplier_id = ?'; params.push(supplier_id); }
-  if (status)      { sql += ' AND p.status = ?';      params.push(status); }
-  if (from)        { sql += ' AND p.created_at >= ?'; params.push(from); }
-  if (to)          { sql += ' AND p.created_at <= ?'; params.push(to); }
+  if (season_id)   { sql += ' AND p.season_id = ?';    params.push(season_id); }
+  if (supplier_id) { sql += ' AND p.supplier_id = ?';  params.push(supplier_id); }
+  if (status)      { sql += ' AND p.status = ?';       params.push(status); }
+  if (from)        { sql += ' AND p.created_at >= ?';  params.push(from); }
+  if (to)          { sql += ' AND p.created_at <= ?';  params.push(to); }
   sql += ' ORDER BY p.created_at DESC';
   const [rows] = await db.query(sql, params);
   return ok(res, { purchases: rows });

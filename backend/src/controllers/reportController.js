@@ -121,12 +121,18 @@ const getInventoryReport = async (req, res) => {
 // GET /api/reports/customer-dues
 const getCustomerDuesReport = async (req, res) => {
   const { factory_id } = req.user;
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+  const sf = season_id ? ` AND s.season_id = ${season_id}` : '';
+
   const [rows] = await db.query(
     `SELECT c.id, c.name, c.phone, c.address,
             COALESCE(SUM(s.remaining_amount), 0) AS outstanding_balance,
             COUNT(s.id) AS unpaid_invoices
      FROM customers c
-     LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'ACTIVE' AND s.remaining_amount > 0
+     LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'ACTIVE' AND s.remaining_amount > 0${sf}
      WHERE c.factory_id = ? AND c.is_deleted = FALSE
      GROUP BY c.id, c.name, c.phone, c.address
      HAVING COALESCE(SUM(s.remaining_amount), 0) > 0
@@ -136,7 +142,7 @@ const getCustomerDuesReport = async (req, res) => {
   const [total] = await db.query(
     `SELECT COALESCE(SUM(s.remaining_amount), 0) AS total_dues
      FROM sales s JOIN customers c ON c.id = s.customer_id
-     WHERE s.factory_id = ? AND s.status = 'ACTIVE' AND c.is_deleted = FALSE`,
+     WHERE s.factory_id = ? AND s.status = 'ACTIVE' AND c.is_deleted = FALSE${season_id ? ' AND s.season_id = ' + season_id : ''}`,
     [factory_id]
   );
   return ok(res, { customers: rows, total_dues: total[0].total_dues });
@@ -145,12 +151,18 @@ const getCustomerDuesReport = async (req, res) => {
 // GET /api/reports/supplier-payables
 const getSupplierPayablesReport = async (req, res) => {
   const { factory_id } = req.user;
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+  const pf = season_id ? ` AND p.season_id = ${season_id}` : '';
+
   const [rows] = await db.query(
     `SELECT s.id, s.name, s.phone,
             COALESCE(SUM(p.remaining_amount), 0) AS outstanding_payable,
             COUNT(p.id) AS unpaid_invoices
      FROM suppliers s
-     LEFT JOIN purchases p ON p.supplier_id = s.id AND p.status = 'ACTIVE' AND p.remaining_amount > 0
+     LEFT JOIN purchases p ON p.supplier_id = s.id AND p.status = 'ACTIVE' AND p.remaining_amount > 0${pf}
      WHERE s.factory_id = ? AND s.is_deleted = FALSE
      GROUP BY s.id, s.name, s.phone
      HAVING COALESCE(SUM(p.remaining_amount), 0) > 0
@@ -160,7 +172,7 @@ const getSupplierPayablesReport = async (req, res) => {
   const [total] = await db.query(
     `SELECT COALESCE(SUM(p.remaining_amount), 0) AS total_payables
      FROM purchases p JOIN suppliers s ON s.id = p.supplier_id
-     WHERE p.factory_id = ? AND p.status = 'ACTIVE' AND s.is_deleted = FALSE`,
+     WHERE p.factory_id = ? AND p.status = 'ACTIVE' AND s.is_deleted = FALSE${season_id ? ' AND p.season_id = ' + season_id : ''}`,
     [factory_id]
   );
   return ok(res, { suppliers: rows, total_payables: total[0].total_payables });
@@ -240,18 +252,24 @@ const getDashboard = async (req, res) => {
   const { factory_id } = req.user;
   const today = new Date().toISOString().slice(0, 10);
 
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+  const seasonFilter = season_id ? ' AND season_id = ' + season_id : '';
+
   const [[todaySales], [totalDues], [totalPayables], [cash], [banks], [lowStock], [empOutstanding]] = await Promise.all([
     db.query(
       `SELECT COUNT(*) AS bills, COALESCE(SUM(total_amount),0) AS sales, COALESCE(SUM(paid_amount),0) AS collected
-       FROM sales WHERE factory_id = ? AND status = 'ACTIVE' AND DATE(created_at) = ?`,
+       FROM sales WHERE factory_id = ? AND status = 'ACTIVE' AND DATE(created_at) = ?${seasonFilter}`,
       [factory_id, today]
     ),
     db.query(
-      `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM sales WHERE factory_id = ? AND status = 'ACTIVE'`,
+      `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM sales WHERE factory_id = ? AND status = 'ACTIVE'${seasonFilter}`,
       [factory_id]
     ),
     db.query(
-      `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM purchases WHERE factory_id = ? AND status = 'ACTIVE'`,
+      `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM purchases WHERE factory_id = ? AND status = 'ACTIVE'${seasonFilter}`,
       [factory_id]
     ),
     db.query('SELECT balance FROM cash_accounts WHERE factory_id = ?', [factory_id]),
@@ -264,7 +282,7 @@ const getDashboard = async (req, res) => {
     ),
     db.query(
       `SELECT COALESCE(SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE 0 END) - SUM(CASE WHEN entry_type='DEBIT' THEN amount ELSE 0 END), 0) AS total
-       FROM employee_khata_entries WHERE factory_id = ?`,
+       FROM employee_khata_entries WHERE factory_id = ?${seasonFilter}`,
       [factory_id]
     ),
   ]);
@@ -272,7 +290,7 @@ const getDashboard = async (req, res) => {
   const [recentSales] = await db.query(
     `SELECT s.id, s.invoice_number, s.total_amount, s.created_at, c.name AS customer_name
      FROM sales s JOIN customers c ON c.id = s.customer_id
-     WHERE s.factory_id = ? AND s.status = 'ACTIVE' ORDER BY s.created_at DESC LIMIT 5`,
+     WHERE s.factory_id = ? AND s.status = 'ACTIVE'${seasonFilter} ORDER BY s.created_at DESC LIMIT 5`,
     [factory_id]
   );
 
@@ -359,10 +377,16 @@ const getIndividualCustomerReport = async (req, res) => {
     const { customer_id, from, to } = req.query;
     if (!customer_id) return res.status(400).json({ success: false, error: { message: 'customer_id is required' } });
 
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT id, invoice_number, total_amount, paid_amount, remaining_amount, created_at
                FROM sales
                WHERE factory_id = ? AND status = 'ACTIVE' AND customer_id = ?`;
     const params = [factory_id, customer_id];
+    if (season_id) { sql += ' AND season_id = ?'; params.push(season_id); }
     if (from) { sql += ' AND created_at >= ?'; params.push(from); }
     if (to)   { sql += ' AND DATE(created_at) <= ?'; params.push(to); }
     sql += ' ORDER BY created_at DESC';
@@ -390,10 +414,16 @@ const getIndividualSupplierReport = async (req, res) => {
     const { supplier_id, from, to } = req.query;
     if (!supplier_id) return res.status(400).json({ success: false, error: { message: 'supplier_id is required' } });
 
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT id, invoice_number, total_amount, paid_amount, remaining_amount, purchase_date, created_at
                FROM purchases
                WHERE factory_id = ? AND status = 'ACTIVE' AND supplier_id = ?`;
     const params = [factory_id, supplier_id];
+    if (season_id) { sql += ' AND season_id = ?'; params.push(season_id); }
     if (from) { sql += ' AND created_at >= ?'; params.push(from); }
     if (to)   { sql += ' AND DATE(created_at) <= ?'; params.push(to); }
     sql += ' ORDER BY created_at DESC';
@@ -460,18 +490,24 @@ const getMillReport = async (req, res) => {
   const { factory_id } = req.user;
   const { from, to } = req.query;
 
-  const dateFilter = (col) => {
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
+  const dateFilter = (col, seasonCol) => {
     let clause = '';
     const p = [];
+    if (season_id) { clause += ` AND ${seasonCol} = ${season_id}`; }
     if (from) { clause += ` AND ${col} >= ?`; p.push(from); }
     if (to)   { clause += ` AND DATE(${col}) <= ?`; p.push(to); }
     return { clause, p };
   };
 
-  const sf = dateFilter('s.created_at');
-  const pf = dateFilter('p.created_at');
-  const ef = dateFilter('e.expense_date');
-  const spf = dateFilter('sp.created_at');
+  const sf = dateFilter('s.created_at', 's.season_id');
+  const pf = dateFilter('p.created_at', 'p.season_id');
+  const ef = dateFilter('e.expense_date', 'e.season_id');
+  const spf = dateFilter('sp.created_at', 'sp.season_id');
 
   const [[salesRow], [purchasesRow], [expensesRow], [salariesRow], [expenseBreakdown], [expenseByGroup]] = await Promise.all([
     // Total sales revenue

@@ -140,6 +140,12 @@ const getExpenses = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { from, to, group_id, khata_id } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT e.id, e.description, e.amount, e.payment_method, e.expense_date, e.created_at,
                       g.name AS group_name, k.name AS khata_name, ba.bank_name
                FROM expenses e
@@ -148,6 +154,7 @@ const getExpenses = async (req, res) => {
                LEFT JOIN bank_accounts ba ON ba.id = e.bank_id
                WHERE e.factory_id = ?`;
     const params = [factory_id];
+    if (season_id) { sql += ' AND e.season_id = ?'; params.push(season_id); }
     if (from)     { sql += ' AND DATE(e.expense_date) >= ?'; params.push(from); }
     if (to)       { sql += ' AND DATE(e.expense_date) <= ?'; params.push(to); }
     if (group_id) { sql += ' AND e.group_id = ?'; params.push(group_id); }
