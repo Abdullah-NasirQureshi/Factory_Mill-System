@@ -44,8 +44,8 @@ const getOpeningBalances = async (req, res) => {
   if (!season[0]) return fail(res, 'NOT_FOUND', 'Season not found', 404);
 
   const [rows] = await db.query(
-    `SELECT ob.*, 
-      CASE 
+    `SELECT ob.*,
+      CASE
         WHEN ob.entity_type = 'CUSTOMER' THEN c.name
         WHEN ob.entity_type = 'SUPPLIER' THEN s.name
         WHEN ob.entity_type = 'EMPLOYEE' THEN e.name
@@ -53,10 +53,10 @@ const getOpeningBalances = async (req, res) => {
         ELSE 'Cash'
       END AS entity_name
      FROM season_opening_balances ob
-     LEFT JOIN customers c  ON ob.entity_type = 'CUSTOMER' AND c.id  = ob.entity_id
-     LEFT JOIN suppliers s  ON ob.entity_type = 'SUPPLIER' AND s.id  = ob.entity_id
-     LEFT JOIN employees e  ON ob.entity_type = 'EMPLOYEE' AND e.id  = ob.entity_id
-     LEFT JOIN bank_accounts b ON ob.entity_type = 'BANK'  AND b.id  = ob.entity_id
+     LEFT JOIN customers c    ON ob.entity_type = 'CUSTOMER' AND c.id = ob.entity_id
+     LEFT JOIN suppliers s    ON ob.entity_type = 'SUPPLIER' AND s.id = ob.entity_id
+     LEFT JOIN employees e    ON ob.entity_type = 'EMPLOYEE' AND e.id = ob.entity_id
+     LEFT JOIN bank_accounts b ON ob.entity_type = 'BANK'    AND b.id = ob.entity_id
      WHERE ob.season_id = ? AND ob.factory_id = ?
      ORDER BY ob.entity_type, ob.entity_id`,
     [id, factory_id]
@@ -65,8 +65,118 @@ const getOpeningBalances = async (req, res) => {
 };
 
 // ─────────────────────────────────────────
+// GET /api/seasons/active/opening-balances/entities
+// Returns all customers, suppliers, employees with their current OB for the active season
+// Used by the OB editor UI
+// ─────────────────────────────────────────
+const getOpeningBalanceEntities = async (req, res) => {
+  const { factory_id } = req.user;
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [factory_id]
+  );
+  if (!seasonRows[0]) return fail(res, 'NOT_FOUND', 'No active season found', 404);
+  const season_id = seasonRows[0].id;
+
+  const [[customers], [suppliers], [employees]] = await Promise.all([
+    db.query(
+      `SELECT c.id, c.name, c.phone,
+              COALESCE(ob.balance, 0) AS opening_balance
+       FROM customers c
+       LEFT JOIN season_opening_balances ob
+         ON ob.entity_type = 'CUSTOMER' AND ob.entity_id = c.id AND ob.season_id = ?
+       WHERE c.factory_id = ? AND c.is_deleted = FALSE
+       ORDER BY c.name`,
+      [season_id, factory_id]
+    ),
+    db.query(
+      `SELECT s.id, s.name, s.phone,
+              COALESCE(ob.balance, 0) AS opening_balance
+       FROM suppliers s
+       LEFT JOIN season_opening_balances ob
+         ON ob.entity_type = 'SUPPLIER' AND ob.entity_id = s.id AND ob.season_id = ?
+       WHERE s.factory_id = ? AND s.is_deleted = FALSE
+       ORDER BY s.name`,
+      [season_id, factory_id]
+    ),
+    db.query(
+      `SELECT e.id, e.name, e.phone,
+              COALESCE(ob.balance, 0) AS opening_balance
+       FROM employees e
+       LEFT JOIN season_opening_balances ob
+         ON ob.entity_type = 'EMPLOYEE' AND ob.entity_id = e.id AND ob.season_id = ?
+       WHERE e.factory_id = ? AND e.is_active = TRUE
+       ORDER BY e.name`,
+      [season_id, factory_id]
+    ),
+  ]);
+
+  return ok(res, { season_id, customers, suppliers, employees });
+};
+
+// ─────────────────────────────────────────
+// PUT /api/seasons/active/opening-balances  — ADMIN only
+// Bulk upsert opening balances for the active season.
+// Body: { entries: [{ entity_type, entity_id, balance }] }
+// balance > 0 = they owe us (customer receivable / supplier payable we owe)
+// balance = 0 removes the entry
+// ─────────────────────────────────────────
+const upsertOpeningBalances = async (req, res) => {
+  const { factory_id } = req.user;
+  const { entries } = req.body;
+
+  if (!Array.isArray(entries) || entries.length === 0)
+    return fail(res, 'VALIDATION_REQUIRED_FIELD', 'entries array is required');
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [factory_id]
+  );
+  if (!seasonRows[0]) return fail(res, 'NOT_FOUND', 'No active season found', 404);
+  const season_id = seasonRows[0].id;
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const entry of entries) {
+      const { entity_type, entity_id, balance } = entry;
+      if (!['CUSTOMER', 'SUPPLIER', 'EMPLOYEE', 'BANK', 'CASH'].includes(entity_type))
+        continue;
+
+      const bal = parseFloat(balance) || 0;
+
+      if (bal === 0) {
+        // Remove the entry if balance is zero
+        await conn.query(
+          `DELETE FROM season_opening_balances
+           WHERE season_id = ? AND factory_id = ? AND entity_type = ? AND entity_id = ?`,
+          [season_id, factory_id, entity_type, entity_id]
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO season_opening_balances (season_id, factory_id, entity_type, entity_id, balance)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (season_id, entity_type, entity_id)
+           DO UPDATE SET balance = EXCLUDED.balance`,
+          [season_id, factory_id, entity_type, entity_id, bal]
+        );
+      }
+    }
+
+    await conn.commit();
+    return ok(res, { message: 'Opening balances saved successfully' });
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+};
+
+// ─────────────────────────────────────────
 // POST /api/seasons/close  — ADMIN only
-// Closes current season, snapshots balances, creates new season
 // ─────────────────────────────────────────
 const closeSeason = async (req, res) => {
   const { factory_id, id: user_id } = req.user;
@@ -79,7 +189,6 @@ const closeSeason = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // 1. Get current active season
     const [activeRows] = await conn.query(
       'SELECT * FROM seasons WHERE factory_id = ? AND is_active = TRUE FOR UPDATE',
       [factory_id]
@@ -90,65 +199,76 @@ const closeSeason = async (req, res) => {
     }
     const currentSeason = activeRows[0];
 
-    // ── 2. Snapshot closing balances ──────────────────────────────
-
-    // 2a. Customers — sum of remaining_amount on active unpaid sales
+    // Snapshot closing balances — current season sales + opening balance carried in
     const [customers] = await conn.query(
-      `SELECT customer_id AS entity_id, SUM(remaining_amount) AS balance
-       FROM sales
-       WHERE factory_id = ? AND season_id = ? AND status = 'ACTIVE' AND is_deleted = FALSE AND remaining_amount > 0
-       GROUP BY customer_id`,
-      [factory_id, currentSeason.id]
+      `SELECT entity_id, SUM(bal) AS balance FROM (
+         SELECT customer_id AS entity_id, SUM(remaining_amount) AS bal
+         FROM sales
+         WHERE factory_id = ? AND season_id = ? AND status = 'ACTIVE' AND is_deleted = FALSE AND remaining_amount > 0
+         GROUP BY customer_id
+         UNION ALL
+         SELECT entity_id, balance AS bal
+         FROM season_opening_balances
+         WHERE factory_id = ? AND season_id = ? AND entity_type = 'CUSTOMER'
+       ) t GROUP BY entity_id`,
+      [factory_id, currentSeason.id, factory_id, currentSeason.id]
     );
 
-    // 2b. Suppliers — sum of remaining_amount on active unpaid purchases
     const [suppliers] = await conn.query(
-      `SELECT supplier_id AS entity_id, SUM(remaining_amount) AS balance
-       FROM purchases
-       WHERE factory_id = ? AND season_id = ? AND status = 'ACTIVE' AND is_deleted = FALSE AND remaining_amount > 0
-       GROUP BY supplier_id`,
-      [factory_id, currentSeason.id]
+      `SELECT entity_id, SUM(bal) AS balance FROM (
+         SELECT supplier_id AS entity_id, SUM(remaining_amount) AS bal
+         FROM purchases
+         WHERE factory_id = ? AND season_id = ? AND status = 'ACTIVE' AND is_deleted = FALSE AND remaining_amount > 0
+         GROUP BY supplier_id
+         UNION ALL
+         SELECT entity_id, balance AS bal
+         FROM season_opening_balances
+         WHERE factory_id = ? AND season_id = ? AND entity_type = 'SUPPLIER'
+       ) t GROUP BY entity_id`,
+      [factory_id, currentSeason.id, factory_id, currentSeason.id]
     );
 
-    // 2c. Employees — outstanding from khata (CREDIT - DEBIT)
     const [employees] = await conn.query(
-      `SELECT employee_id AS entity_id,
-              SUM(CASE WHEN entry_type = 'CREDIT' THEN amount ELSE -amount END) AS balance
-       FROM employee_khata_entries
-       WHERE factory_id = ? AND season_id = ?
-       GROUP BY employee_id
-       HAVING SUM(CASE WHEN entry_type = 'CREDIT' THEN amount ELSE -amount END) != 0`,
-      [factory_id, currentSeason.id]
+      `SELECT entity_id, SUM(bal) AS balance FROM (
+         SELECT employee_id AS entity_id,
+                SUM(CASE WHEN entry_type = 'CREDIT' THEN amount ELSE -amount END) AS bal
+         FROM employee_khata_entries
+         WHERE factory_id = ? AND season_id = ?
+         GROUP BY employee_id
+         UNION ALL
+         SELECT entity_id, balance AS bal
+         FROM season_opening_balances
+         WHERE factory_id = ? AND season_id = ? AND entity_type = 'EMPLOYEE'
+       ) t GROUP BY entity_id`,
+      [factory_id, currentSeason.id, factory_id, currentSeason.id]
     );
 
-    // 2d. Banks — current balance
     const [banks] = await conn.query(
       'SELECT id AS entity_id, balance FROM bank_accounts WHERE factory_id = ? AND is_deleted = FALSE',
       [factory_id]
     );
 
-    // 2e. Cash — current balance
     const [cash] = await conn.query(
       'SELECT balance FROM cash_accounts WHERE factory_id = ?',
       [factory_id]
     );
 
-    // 3. Close current season
+    // Close current season
     await conn.query(
       `UPDATE seasons SET is_active = FALSE, end_date = CURRENT_DATE, closed_at = NOW(), closed_by = ?
        WHERE id = ?`,
       [user_id, currentSeason.id]
     );
 
-    // 4. Create new season
+    // Create new season
     const [newSeasonRows] = await conn.query(
       `INSERT INTO seasons (factory_id, name, start_date, is_active) VALUES (?, ?, CURRENT_DATE, TRUE)`,
       [factory_id, new_season_name.trim()]
     );
     const newSeasonId = newSeasonRows[0]?.id || newSeasonRows.insertId;
 
-    // 5. Insert opening balances for new season
-    const insertOB = async (type, rows, idField = 'entity_id') => {
+    // Insert opening balances for new season
+    const insertOB = async (type, rows) => {
       for (const row of rows) {
         const bal = parseFloat(row.balance);
         if (!bal || bal === 0) continue;
@@ -156,7 +276,7 @@ const closeSeason = async (req, res) => {
           `INSERT INTO season_opening_balances (season_id, factory_id, entity_type, entity_id, balance)
            VALUES (?, ?, ?, ?, ?)
            ON CONFLICT (season_id, entity_type, entity_id) DO UPDATE SET balance = EXCLUDED.balance`,
-          [newSeasonId, factory_id, type, row[idField], bal]
+          [newSeasonId, factory_id, type, row.entity_id, bal]
         );
       }
     };
@@ -174,14 +294,11 @@ const closeSeason = async (req, res) => {
       );
     }
 
-    // 6. Reset document sequences for new season
+    // Reset document sequences
     await conn.query(
       `UPDATE document_sequences SET last_sequence = 0 WHERE factory_id = ?`,
       [factory_id]
     );
-
-    // 7. Inventory carries forward automatically (no reset needed)
-    // stock_transactions for new season will start fresh via season_id scoping
 
     await conn.commit();
 
@@ -200,4 +317,5 @@ const closeSeason = async (req, res) => {
   }
 };
 
-module.exports = { listSeasons, getActiveSeason, getOpeningBalances, closeSeason };
+module.exports = { listSeasons, getActiveSeason, getOpeningBalances, getOpeningBalanceEntities, upsertOpeningBalances, closeSeason };
+
