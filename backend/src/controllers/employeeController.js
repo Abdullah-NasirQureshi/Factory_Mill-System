@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // ─── EMPLOYEE CRUD ────────────────────────────────────────────────────────────
 
@@ -9,12 +10,22 @@ const getEmployees = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { search, active } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+    const seasonFilter = season_id ? ` AND season_id = ${season_id}` : '';
+
     let sql = `
       SELECT e.*,
         COALESCE(
           (SELECT SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE -amount END)
            FROM employee_khata_entries
-           WHERE employee_id = e.id AND factory_id = e.factory_id), 0
+           WHERE employee_id = e.id AND factory_id = e.factory_id${seasonFilter}), 0
+        ) + COALESCE(
+          (SELECT balance FROM season_opening_balances
+           WHERE entity_type = 'EMPLOYEE' AND entity_id = e.id AND season_id = ${season_id || 'NULL'}), 0
         ) AS outstanding_balance
       FROM employees e
       WHERE e.factory_id = ?`;
@@ -38,12 +49,22 @@ const getEmployee = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { id } = req.params;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+    const seasonFilter = season_id ? ` AND season_id = ${season_id}` : '';
+
     const [rows] = await db.query(
       `SELECT e.*,
          COALESCE(
            (SELECT SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE -amount END)
             FROM employee_khata_entries
-            WHERE employee_id = e.id AND factory_id = e.factory_id), 0
+            WHERE employee_id = e.id AND factory_id = e.factory_id${seasonFilter}), 0
+         ) + COALESCE(
+           (SELECT balance FROM season_opening_balances
+            WHERE entity_type = 'EMPLOYEE' AND entity_id = e.id AND season_id = ${season_id || 'NULL'}), 0
          ) AS outstanding_balance
        FROM employees e
        WHERE e.id = ? AND e.factory_id = ?`,
@@ -129,6 +150,12 @@ const getKhata = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { id } = req.params;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     const [rows] = await db.query(
       `SELECT k.*,
          ba.bank_name,
@@ -139,10 +166,20 @@ const getKhata = async (req, res) => {
        LEFT JOIN bank_accounts ba ON ba.id = k.bank_id
        JOIN employee_khata_entries k2 ON k2.id = k.id
        WHERE k.employee_id = ? AND k.factory_id = ?
+         ${season_id ? `AND k.season_id = ${season_id}` : ''}
        ORDER BY k.entry_date ASC, k.created_at ASC`,
       [id, factory_id]
     );
-    return ok(res, { entries: rows });
+
+    // Fetch opening balance for this season
+    const [obRows] = season_id ? await db.query(
+      `SELECT balance FROM season_opening_balances
+       WHERE entity_type = 'EMPLOYEE' AND entity_id = ? AND season_id = ?`,
+      [id, season_id]
+    ) : [[]];
+    const opening_balance = parseFloat(obRows[0]?.balance || 0);
+
+    return ok(res, { entries: rows, opening_balance });
   } catch (e) {
     console.error('getKhata error:', e);
     return fail(res, 'SERVER_ERROR', e.message, 500);
@@ -178,6 +215,7 @@ const createKhataEntry = async (req, res) => {
     await conn.beginTransaction();
 
     let transaction_id = null;
+    const season_id = await getActiveSeasonId(conn, factory_id);
 
     if (needsCash) {
       if (payment_method === 'CASH') {
@@ -202,21 +240,21 @@ const createKhataEntry = async (req, res) => {
       const pv = await nextDocNumber(conn, factory_id, 'PV');
       const txType = entry_type === 'CREDIT' ? 'OUT' : 'IN';
       const [, , txResult] = await conn.query(
-        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes)
-         VALUES (?, ?, 'EMPLOYEE', ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes, season_id)
+         VALUES (?, ?, 'EMPLOYEE', ?, ?, ?, ?, ?, ?, ?)`,
         [factory_id, txType, employee_id, payment_method, bank_id || null, amount, pv,
-         description || (entry_type === 'CREDIT' ? 'Employee advance/loan' : 'Employee cash repayment')]
+         description || (entry_type === 'CREDIT' ? 'Employee advance/loan' : 'Employee cash repayment'), season_id]
       );
       transaction_id = txResult.insertId;
     }
 
     const [, , entryResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, employee_id, entry_type, amount, description || null,
        needsCash, needsCash ? payment_method : null, needsCash ? (bank_id || null) : null,
-       entry_date || new Date().toISOString().slice(0, 10), transaction_id, user_id]
+       entry_date || new Date().toISOString().slice(0, 10), transaction_id, user_id, season_id]
     );
 
     await conn.commit();
@@ -283,12 +321,19 @@ const getSalaryPayments = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { employee_id, month } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT sp.*, e.name AS employee_name, ba.bank_name
                FROM employee_salary_payments sp
                JOIN employees e ON e.id = sp.employee_id
                LEFT JOIN bank_accounts ba ON ba.id = sp.bank_id
                WHERE sp.factory_id = ?`;
     const params = [factory_id];
+    if (season_id)   { sql += ' AND sp.season_id = ?'; params.push(season_id); }
     if (employee_id) { sql += ' AND sp.employee_id = ?'; params.push(employee_id); }
     if (month)       { sql += ' AND TO_CHAR(sp.salary_month, \'YYYY-MM\') = ?'; params.push(month); }
     sql += ' ORDER BY sp.salary_month DESC, sp.created_at DESC';
@@ -362,38 +407,39 @@ const createSalaryPayment = async (req, res) => {
 
     // Create transaction record with PV number
     const pv = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const txNote = `Salary: ${monthLabel}${notes ? ' — ' + notes : ''}`;
     const [, , txResult] = await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes)
-       VALUES (?, 'OUT', 'EMPLOYEE', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, employee_id, payment_method, bank_id || null, amount, pv, txNote]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, voucher_number, notes, season_id)
+       VALUES (?, 'OUT', 'EMPLOYEE', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, employee_id, payment_method, bank_id || null, amount, pv, txNote, season_id]
     );
     const transaction_id = txResult.insertId;
 
     // Auto-post DEBIT entry (salary earned — no cash movement, offsets the credit)
     const [, , debitResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, 'DEBIT', ?, ?, FALSE, NULL, NULL, CURRENT_DATE, NULL, ?)`,
-      [factory_id, employee_id, amount, `Salary earned: ${monthLabel}`, user_id]
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, 'DEBIT', ?, ?, FALSE, NULL, NULL, CURRENT_DATE, NULL, ?, ?)`,
+      [factory_id, employee_id, amount, `Salary earned: ${monthLabel}`, user_id, season_id]
     );
     const debit_khata_entry_id = debitResult.insertId;
 
     // Auto-post CREDIT entry in employee's khata (mill gave cash out)
     const [, , khataResult] = await conn.query(
       `INSERT INTO employee_khata_entries
-         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by)
-       VALUES (?, ?, 'CREDIT', ?, ?, TRUE, ?, ?, CURRENT_DATE, ?, ?)`,
-      [factory_id, employee_id, amount, `Salary paid: ${monthLabel}`, payment_method, bank_id || null, transaction_id, user_id]
+         (factory_id, employee_id, entry_type, amount, description, has_cash_movement, payment_method, bank_id, entry_date, transaction_id, created_by, season_id)
+       VALUES (?, ?, 'CREDIT', ?, ?, TRUE, ?, ?, CURRENT_DATE, ?, ?, ?)`,
+      [factory_id, employee_id, amount, `Salary paid: ${monthLabel}`, payment_method, bank_id || null, transaction_id, user_id, season_id]
     );
     const khata_entry_id = khataResult.insertId;
 
     // Record salary payment
     const [, , spResult] = await conn.query(
       `INSERT INTO employee_salary_payments
-         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, debit_khata_entry_id, transaction_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, debit_khata_entry_id, transaction_id, user_id]
+         (factory_id, employee_id, salary_month, amount, payment_method, bank_id, notes, khata_entry_id, debit_khata_entry_id, transaction_id, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, employee_id, salary_month, amount, payment_method, bank_id || null, notes || null, khata_entry_id, debit_khata_entry_id, transaction_id, user_id, season_id]
     );
 
     await conn.commit();

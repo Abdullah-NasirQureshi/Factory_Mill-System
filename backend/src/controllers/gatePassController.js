@@ -1,10 +1,16 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 const getGatePasses = async (req, res) => {
   const { factory_id } = req.user;
   const { from, to, type, search } = req.query;
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
 
   let q = `SELECT gp.*, u.username AS created_by_name
            FROM gate_passes gp
@@ -12,6 +18,7 @@ const getGatePasses = async (req, res) => {
            WHERE gp.factory_id = ?`;
   const params = [factory_id];
 
+  if (season_id) { q += ' AND gp.season_id = ?'; params.push(season_id); }
   if (from)   { q += ' AND gp.pass_date >= ?'; params.push(from); }
   if (to)     { q += ' AND gp.pass_date <= ?'; params.push(to + ' 23:59:59'); }
   if (type)   { q += ' AND gp.pass_type = ?'; params.push(type); }
@@ -48,11 +55,12 @@ const createGatePass = async (req, res) => {
   try {
     await conn.beginTransaction();
     const gp = await nextDocNumber(conn, factory_id, 'GP');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [result] = await conn.query(
-      `INSERT INTO gate_passes (factory_id, gp_number, pass_type, vehicle_number, driver_name, driver_phone, party_type, party_name, description, pass_date, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO gate_passes (factory_id, gp_number, pass_type, vehicle_number, driver_name, driver_phone, party_type, party_name, description, pass_date, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, gp, pass_type, vehicle_number || null, driver_name || null, driver_phone || null,
-       party_type, party_name, description || null, pass_date || new Date(), user_id]
+       party_type, party_name, description || null, pass_date || new Date(), user_id, season_id]
     );
     await conn.commit();
     return ok(res, { gate_pass: { id: result.insertId, gp_number: gp } }, 201);

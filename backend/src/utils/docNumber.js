@@ -3,9 +3,9 @@ const db = require('../config/db');
 /**
  * Generates next document number for a factory + type.
  * Uses row-level locking to prevent duplicates under concurrency.
- * @param {object} conn  - active DB connection (inside a transaction)
+ * @param {object} conn       - active DB connection (inside a transaction)
  * @param {number} factory_id
- * @param {'SI'|'PI'|'PV'|'JV'} type
+ * @param {'SI'|'PI'|'PV'|'JV'|'GP'} type
  * @returns {string}  e.g. "SI-00001"
  */
 async function nextDocNumber(conn, factory_id, type) {

@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // GET /api/expenses/groups
 const getGroups = async (req, res) => {
@@ -139,6 +140,12 @@ const getExpenses = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { from, to, group_id, khata_id } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT e.id, e.description, e.amount, e.payment_method, e.expense_date, e.created_at,
                       g.name AS group_name, k.name AS khata_name, ba.bank_name
                FROM expenses e
@@ -147,6 +154,7 @@ const getExpenses = async (req, res) => {
                LEFT JOIN bank_accounts ba ON ba.id = e.bank_id
                WHERE e.factory_id = ?`;
     const params = [factory_id];
+    if (season_id) { sql += ' AND e.season_id = ?'; params.push(season_id); }
     if (from)     { sql += ' AND DATE(e.expense_date) >= ?'; params.push(from); }
     if (to)       { sql += ' AND DATE(e.expense_date) <= ?'; params.push(to); }
     if (group_id) { sql += ' AND e.group_id = ?'; params.push(group_id); }
@@ -196,17 +204,19 @@ const createExpense = async (req, res) => {
       await conn.query('UPDATE bank_accounts SET balance = balance - ? WHERE id = ? AND factory_id = ?', [amount, bank_id, factory_id]);
     }
 
+    const season_id = await getActiveSeasonId(conn, factory_id);
+
     const [, , result] = await conn.query(
-      `INSERT INTO expenses (factory_id, group_id, khata_id, description, amount, payment_method, bank_id, expense_date, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO expenses (factory_id, group_id, khata_id, description, amount, payment_method, bank_id, expense_date, created_by, season_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [factory_id, group_id, khata_id, description || null, amount, payment_method,
-       bank_id || null, expense_date || new Date().toISOString().slice(0, 10), user_id]
+       bank_id || null, expense_date || new Date().toISOString().slice(0, 10), user_id, season_id]
     );
 
     await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, payment_method, bank_id, amount, notes)
-       VALUES (?, 'OUT', 'SYSTEM', ?, ?, ?, ?)`,
-      [factory_id, payment_method, bank_id || null, amount, 'Expense: ' + (description || 'General')]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, payment_method, bank_id, amount, notes, season_id)
+       VALUES (?, 'OUT', 'SYSTEM', ?, ?, ?, ?, ?)`,
+      [factory_id, payment_method, bank_id || null, amount, 'Expense: ' + (description || 'General'), season_id]
     );
 
     await conn.commit();

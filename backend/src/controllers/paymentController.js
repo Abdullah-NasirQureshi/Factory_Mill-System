@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
 const { allocatePayment } = require('../utils/allocate');
+const { getActiveSeasonId } = require('../utils/activeSeason');
 
 // POST /api/payments/customer
 const recordCustomerPayment = async (req, res) => {
@@ -28,10 +29,11 @@ const recordCustomerPayment = async (req, res) => {
     if (!cust[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Customer not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [payRows] = await conn.query(
-      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
-       VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id]
+      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by, season_id)
+       VALUES (?, ?, 'CUSTOMER_PAYMENT', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, voucher_number, customer_id, payment_method, bank_id || null, amount, notes || null, user_id, season_id]
     );
     const payment_id = payRows[0].id;
 
@@ -47,9 +49,9 @@ const recordCustomerPayment = async (req, res) => {
 
     // ledger entry
     await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes)
-       VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, customer_id, payment_method, bank_id || null, amount, payment_id, notes || null]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes, season_id)
+       VALUES (?, 'IN', 'CUSTOMER', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, customer_id, payment_method, bank_id || null, amount, payment_id, notes || null, season_id]
     );
 
     await conn.commit();
@@ -88,10 +90,11 @@ const recordSupplierPayment = async (req, res) => {
     if (!sup[0]) { await conn.rollback(); return fail(res, 'NOT_FOUND', 'Supplier not found', 404); }
 
     const voucher_number = await nextDocNumber(conn, factory_id, 'PV');
+    const season_id = await getActiveSeasonId(conn, factory_id);
     const [payRows2] = await conn.query(
-      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by)
-       VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id]
+      `INSERT INTO payments (factory_id, voucher_number, type, reference_id, payment_method, bank_id, amount, notes, created_by, season_id)
+       VALUES (?, ?, 'SUPPLIER_PAYMENT', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, voucher_number, supplier_id, payment_method, bank_id || null, amount, notes || null, user_id, season_id]
     );
     const payment_id = payRows2[0].id;
 
@@ -104,9 +107,9 @@ const recordSupplierPayment = async (req, res) => {
     }
 
     await conn.query(
-      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes)
-       VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?, ?)`,
-      [factory_id, supplier_id, payment_method, bank_id || null, amount, payment_id, notes || null]
+      `INSERT INTO transactions (factory_id, transaction_type, source_type, source_id, payment_method, bank_id, amount, reference_id, notes, season_id)
+       VALUES (?, 'OUT', 'SUPPLIER', ?, ?, ?, ?, ?, ?, ?)`,
+      [factory_id, supplier_id, payment_method, bank_id || null, amount, payment_id, notes || null, season_id]
     );
 
     await conn.commit();
@@ -124,6 +127,12 @@ const recordSupplierPayment = async (req, res) => {
 const getPayments = async (req, res) => {
   const { factory_id } = req.user;
   const { type, from, to } = req.query;
+
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
   let sql = `SELECT pay.*, ba.bank_name,
              CASE WHEN pay.type = 'CUSTOMER_PAYMENT' THEN c.name ELSE s.name END AS party_name
              FROM payments pay
@@ -132,6 +141,7 @@ const getPayments = async (req, res) => {
              LEFT JOIN suppliers s ON pay.type = 'SUPPLIER_PAYMENT' AND s.id = pay.reference_id
              WHERE pay.factory_id = ?`;
   const params = [factory_id];
+  if (season_id) { sql += ' AND pay.season_id = ?'; params.push(season_id); }
   if (type) { sql += ' AND pay.type = ?'; params.push(type); }
   if (from) { sql += ' AND pay.created_at >= ?'; params.push(from); }
   if (to)   { sql += ' AND pay.created_at <= ?'; params.push(to); }

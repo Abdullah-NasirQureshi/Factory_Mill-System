@@ -1,6 +1,6 @@
 /**
  * Allocates a payment amount to outstanding records (sales or purchases)
- * oldest-first. Marks records as fully paid when remaining reaches 0.
+ * oldest-first. Also reduces the season opening balance if present.
  *
  * @param {object} conn         - DB connection inside a transaction
  * @param {'SALE'|'PURCHASE'}   referenceType
@@ -13,16 +13,45 @@
  * @returns {Array}             - allocation records created
  */
 async function allocatePayment(conn, referenceType, table, ownerId, ownerField, factory_id, payment_id, amount) {
-  // fetch unpaid records oldest first
+  let remaining = parseFloat(amount);
+  const allocations = [];
+
+  // ── Step 1: Reduce opening balance first (if any) ──────────────────────────
+  const entityType = referenceType === 'SALE' ? 'CUSTOMER' : 'SUPPLIER';
+  const [seasonRows] = await conn.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
+  if (season_id) {
+    const [obRows] = await conn.query(
+      `SELECT id, balance FROM season_opening_balances
+       WHERE entity_type = ? AND entity_id = ? AND season_id = ? AND balance > 0
+       FOR UPDATE`,
+      [entityType, ownerId, season_id]
+    );
+    if (obRows[0] && remaining > 0) {
+      const obBalance = parseFloat(obRows[0].balance);
+      const deduct = Math.min(remaining, obBalance);
+      const newBalance = Math.round((obBalance - deduct) * 100) / 100;
+      await conn.query(
+        'UPDATE season_opening_balances SET balance = ? WHERE id = ?',
+        [newBalance, obRows[0].id]
+      );
+      remaining = Math.round((remaining - deduct) * 100) / 100;
+    }
+  }
+
+  if (remaining <= 0) return allocations;
+
+  // ── Step 2: Allocate to current season invoices oldest-first ───────────────
   const [records] = await conn.query(
     `SELECT id, remaining_amount FROM ${table}
      WHERE ${ownerField} = ? AND factory_id = ? AND status = 'ACTIVE' AND remaining_amount > 0
      ORDER BY created_at ASC FOR UPDATE`,
     [ownerId, factory_id]
   );
-
-  let remaining = parseFloat(amount);
-  const allocations = [];
 
   for (const record of records) {
     if (remaining <= 0) break;

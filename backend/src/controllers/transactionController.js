@@ -2,10 +2,21 @@ const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { nextDocNumber } = require('../utils/docNumber');
 
+// Helper: get active season_id for factory (returns null if none — for backward compat)
+async function getActiveSeason(factory_id) {
+  const [rows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1',
+    [factory_id]
+  );
+  return rows[0]?.id || null;
+}
+
 // GET /api/transactions
 const getTransactions = async (req, res) => {
   const { factory_id } = req.user;
   const { type, method, from, to, source_type } = req.query;
+
+  const season_id = await getActiveSeason(factory_id);
 
   let sql = `SELECT t.*, ba.bank_name,
                CASE t.source_type
@@ -21,6 +32,8 @@ const getTransactions = async (req, res) => {
              LEFT JOIN employees e ON t.source_type = 'EMPLOYEE' AND e.id = t.source_id
              WHERE t.factory_id = ? AND t.is_deleted = FALSE`;
   const params = [factory_id];
+
+  if (season_id) { sql += ' AND t.season_id = ?'; params.push(season_id); }
   if (type)        { sql += ' AND t.transaction_type = ?'; params.push(type); }
   if (method)      { sql += ' AND t.payment_method = ?';   params.push(method); }
   if (source_type) { sql += ' AND t.source_type = ?';      params.push(source_type); }

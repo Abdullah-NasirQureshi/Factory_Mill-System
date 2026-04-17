@@ -25,6 +25,7 @@ import GatePassPage from './pages/GatePassPage';
 import EmployeesPage from './pages/EmployeesPage';
 import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import SalaryPage from './pages/SalaryPage';
+import SeasonsPage from './pages/SeasonsPage';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -51,6 +52,7 @@ function AppRoutes() {
       <Route path="/employees/:id" element={<ProtectedRoute><Layout><EmployeeDetailPage /></Layout></ProtectedRoute>} />
       <Route path="/salary" element={<ProtectedRoute><Layout><SalaryPage /></Layout></ProtectedRoute>} />
       <Route path="/finance" element={<ProtectedRoute adminOnly><Layout><FinancePage /></Layout></ProtectedRoute>} />
+      <Route path="/seasons" element={<ProtectedRoute adminOnly><Layout><SeasonsPage /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute adminOnly><Layout><SettingsPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
