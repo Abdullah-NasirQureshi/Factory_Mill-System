@@ -1,21 +1,39 @@
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 
+// Helper: get active season_id
+async function getActiveSeason(factory_id) {
+  const [rows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  return rows[0]?.id || null;
+}
+
 // GET /api/suppliers?search=
 const getSuppliers = async (req, res) => {
   const { factory_id } = req.user;
   const { search } = req.query;
+  const season_id = await getActiveSeason(factory_id);
+
   let sql = `SELECT s.*,
-               COALESCE(SUM(p.remaining_amount), 0) AS outstanding_payable
+               COALESCE((
+                 SELECT ob.balance FROM season_opening_balances ob
+                 WHERE ob.entity_type = 'SUPPLIER' AND ob.entity_id = s.id
+                   AND ob.season_id = ${season_id || 'NULL'}
+               ), 0)
+               + COALESCE((
+                 SELECT SUM(p.remaining_amount) FROM purchases p
+                 WHERE p.supplier_id = s.id AND p.status = 'ACTIVE'
+                   ${season_id ? `AND p.season_id = ${season_id}` : ''}
+               ), 0) AS outstanding_payable
              FROM suppliers s
-             LEFT JOIN purchases p ON p.supplier_id = s.id AND p.status = 'ACTIVE'
              WHERE s.factory_id = ? AND s.is_deleted = FALSE`;
   const params = [factory_id];
   if (search) {
-    sql += ' AND (s.name LIKE ? OR s.phone LIKE ?)';
+    sql += ' AND (s.name ILIKE ? OR s.phone ILIKE ?)';
     params.push(`%${search}%`, `%${search}%`);
   }
-  sql += ' GROUP BY s.id ORDER BY s.name';
+  sql += ' ORDER BY s.name';
   const [rows] = await db.query(sql, params);
   return ok(res, { suppliers: rows });
 };
@@ -24,6 +42,7 @@ const getSuppliers = async (req, res) => {
 const getSupplier = async (req, res) => {
   const { factory_id } = req.user;
   const { id } = req.params;
+  const season_id = await getActiveSeason(factory_id);
 
   const [sup] = await db.query(
     'SELECT * FROM suppliers WHERE id = ? AND factory_id = ? AND is_deleted = FALSE',
@@ -31,27 +50,43 @@ const getSupplier = async (req, res) => {
   );
   if (!sup[0]) return fail(res, 'NOT_FOUND', 'Supplier not found', 404);
 
-  const [purchases] = await db.query(
-    `SELECT pu.id, pu.invoice_number, pu.total_amount, pu.paid_amount,
-            pu.remaining_amount, pu.purchase_date, pu.status, pu.created_at,
-            COALESCE(
-              json_agg(
-                json_build_object('product_name', pi.product_name, 'quantity', pi.quantity,
-                            'unit_price', pi.unit_price, 'total', pi.total)
-              ) FILTER (WHERE pi.id IS NOT NULL), '[]'::json
-            ) AS items
-     FROM purchases pu
-     LEFT JOIN purchase_items pi ON pi.purchase_id = pu.id
-     WHERE pu.supplier_id = ? AND pu.factory_id = ?
-     GROUP BY pu.id ORDER BY pu.created_at DESC`,
-    [id, factory_id]
-  );
+  const purchSql = season_id
+    ? `SELECT pu.id, pu.invoice_number, pu.total_amount, pu.paid_amount,
+              pu.remaining_amount, pu.purchase_date, pu.status, pu.created_at,
+              COALESCE(json_agg(json_build_object('product_name', pi.product_name, 'quantity', pi.quantity,
+                          'unit_price', pi.unit_price, 'total', pi.total)
+              ) FILTER (WHERE pi.id IS NOT NULL), '[]'::json) AS items
+       FROM purchases pu
+       LEFT JOIN purchase_items pi ON pi.purchase_id = pu.id
+       WHERE pu.supplier_id = ? AND pu.factory_id = ? AND pu.season_id = ?
+       GROUP BY pu.id ORDER BY pu.created_at DESC`
+    : `SELECT pu.id, pu.invoice_number, pu.total_amount, pu.paid_amount,
+              pu.remaining_amount, pu.purchase_date, pu.status, pu.created_at,
+              COALESCE(json_agg(json_build_object('product_name', pi.product_name, 'quantity', pi.quantity,
+                          'unit_price', pi.unit_price, 'total', pi.total)
+              ) FILTER (WHERE pi.id IS NOT NULL), '[]'::json) AS items
+       FROM purchases pu
+       LEFT JOIN purchase_items pi ON pi.purchase_id = pu.id
+       WHERE pu.supplier_id = ? AND pu.factory_id = ?
+       GROUP BY pu.id ORDER BY pu.created_at DESC`;
 
-  const outstanding_payable = purchases
+  const purchParams = season_id ? [id, factory_id, season_id] : [id, factory_id];
+  const [purchases] = await db.query(purchSql, purchParams);
+
+  const [obRows] = await db.query(
+    `SELECT balance FROM season_opening_balances
+     WHERE entity_type = 'SUPPLIER' AND entity_id = ? AND season_id = ?`,
+    [id, season_id || 0]
+  );
+  const opening_balance = parseFloat(obRows[0]?.balance || 0);
+
+  const season_purchases_outstanding = purchases
     .filter((p) => p.status === 'ACTIVE')
     .reduce((sum, p) => sum + parseFloat(p.remaining_amount), 0);
 
-  return ok(res, { supplier: sup[0], purchases, outstanding_payable });
+  const outstanding_payable = opening_balance + season_purchases_outstanding;
+
+  return ok(res, { supplier: sup[0], purchases, outstanding_payable, opening_balance });
 };
 
 // POST /api/suppliers

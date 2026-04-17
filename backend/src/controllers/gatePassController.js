@@ -7,12 +7,18 @@ const getGatePasses = async (req, res) => {
   const { factory_id } = req.user;
   const { from, to, type, search } = req.query;
 
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
   let q = `SELECT gp.*, u.username AS created_by_name
            FROM gate_passes gp
            JOIN users u ON u.id = gp.created_by
            WHERE gp.factory_id = ?`;
   const params = [factory_id];
 
+  if (season_id) { q += ' AND gp.season_id = ?'; params.push(season_id); }
   if (from)   { q += ' AND gp.pass_date >= ?'; params.push(from); }
   if (to)     { q += ' AND gp.pass_date <= ?'; params.push(to + ' 23:59:59'); }
   if (type)   { q += ' AND gp.pass_type = ?'; params.push(type); }

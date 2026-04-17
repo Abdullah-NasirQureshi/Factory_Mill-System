@@ -127,25 +127,37 @@ const getCustomerDuesReport = async (req, res) => {
   const season_id = seasonRows[0]?.id || null;
   const sf = season_id ? ` AND s.season_id = ${season_id}` : '';
 
+  // Get all customers with their current season sales outstanding
   const [rows] = await db.query(
     `SELECT c.id, c.name, c.phone, c.address,
-            COALESCE(SUM(s.remaining_amount), 0) AS outstanding_balance,
-            COUNT(s.id) AS unpaid_invoices
+            COALESCE(SUM(s.remaining_amount), 0) AS sales_outstanding
      FROM customers c
-     LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'ACTIVE' AND s.remaining_amount > 0${sf}
+     LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'ACTIVE'${sf}
      WHERE c.factory_id = ? AND c.is_deleted = FALSE
-     GROUP BY c.id, c.name, c.phone, c.address
-     HAVING COALESCE(SUM(s.remaining_amount), 0) > 0
-     ORDER BY outstanding_balance DESC`,
+     GROUP BY c.id, c.name, c.phone, c.address`,
     [factory_id]
   );
-  const [total] = await db.query(
-    `SELECT COALESCE(SUM(s.remaining_amount), 0) AS total_dues
-     FROM sales s JOIN customers c ON c.id = s.customer_id
-     WHERE s.factory_id = ? AND s.status = 'ACTIVE' AND c.is_deleted = FALSE${season_id ? ' AND s.season_id = ' + season_id : ''}`,
-    [factory_id]
-  );
-  return ok(res, { customers: rows, total_dues: total[0].total_dues });
+
+  // Get opening balances for this season
+  const [obRows] = season_id ? await db.query(
+    `SELECT entity_id, balance FROM season_opening_balances
+     WHERE factory_id = ? AND season_id = ? AND entity_type = 'CUSTOMER'`,
+    [factory_id, season_id]
+  ) : [[]];
+  const obMap = {};
+  obRows.forEach(r => { obMap[r.entity_id] = parseFloat(r.balance); });
+
+  const customers = rows
+    .map(r => ({
+      ...r,
+      opening_balance: obMap[r.id] || 0,
+      outstanding_balance: (obMap[r.id] || 0) + parseFloat(r.sales_outstanding),
+    }))
+    .filter(r => r.outstanding_balance > 0)
+    .sort((a, b) => b.outstanding_balance - a.outstanding_balance);
+
+  const total_dues = customers.reduce((sum, r) => sum + r.outstanding_balance, 0);
+  return ok(res, { customers, total_dues });
 };
 
 // GET /api/reports/supplier-payables
@@ -159,23 +171,33 @@ const getSupplierPayablesReport = async (req, res) => {
 
   const [rows] = await db.query(
     `SELECT s.id, s.name, s.phone,
-            COALESCE(SUM(p.remaining_amount), 0) AS outstanding_payable,
-            COUNT(p.id) AS unpaid_invoices
+            COALESCE(SUM(p.remaining_amount), 0) AS purchases_outstanding
      FROM suppliers s
-     LEFT JOIN purchases p ON p.supplier_id = s.id AND p.status = 'ACTIVE' AND p.remaining_amount > 0${pf}
+     LEFT JOIN purchases p ON p.supplier_id = s.id AND p.status = 'ACTIVE'${pf}
      WHERE s.factory_id = ? AND s.is_deleted = FALSE
-     GROUP BY s.id, s.name, s.phone
-     HAVING COALESCE(SUM(p.remaining_amount), 0) > 0
-     ORDER BY outstanding_payable DESC`,
+     GROUP BY s.id, s.name, s.phone`,
     [factory_id]
   );
-  const [total] = await db.query(
-    `SELECT COALESCE(SUM(p.remaining_amount), 0) AS total_payables
-     FROM purchases p JOIN suppliers s ON s.id = p.supplier_id
-     WHERE p.factory_id = ? AND p.status = 'ACTIVE' AND s.is_deleted = FALSE${season_id ? ' AND p.season_id = ' + season_id : ''}`,
-    [factory_id]
-  );
-  return ok(res, { suppliers: rows, total_payables: total[0].total_payables });
+
+  const [obRows] = season_id ? await db.query(
+    `SELECT entity_id, balance FROM season_opening_balances
+     WHERE factory_id = ? AND season_id = ? AND entity_type = 'SUPPLIER'`,
+    [factory_id, season_id]
+  ) : [[]];
+  const obMap = {};
+  obRows.forEach(r => { obMap[r.entity_id] = parseFloat(r.balance); });
+
+  const suppliers = rows
+    .map(r => ({
+      ...r,
+      opening_balance: obMap[r.id] || 0,
+      outstanding_payable: (obMap[r.id] || 0) + parseFloat(r.purchases_outstanding),
+    }))
+    .filter(r => r.outstanding_payable > 0)
+    .sort((a, b) => b.outstanding_payable - a.outstanding_payable);
+
+  const total_payables = suppliers.reduce((sum, r) => sum + r.outstanding_payable, 0);
+  return ok(res, { suppliers, total_payables });
 };
 
 // GET /api/reports/cash-flow?from=&to=
@@ -214,6 +236,11 @@ const getTransactionReport = async (req, res) => {
   const { factory_id } = req.user;
   const { from, to, type, method } = req.query;
 
+  const [seasonRows] = await db.query(
+    'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+  );
+  const season_id = seasonRows[0]?.id || null;
+
   let sql = `SELECT t.id, t.transaction_type, t.payment_method, t.amount,
                     t.source_type, t.created_at, t.notes,
                     ba.bank_name,
@@ -228,6 +255,7 @@ const getTransactionReport = async (req, res) => {
              LEFT JOIN suppliers s ON t.source_type = 'SUPPLIER' AND s.id = t.source_id
              WHERE t.factory_id = ? AND t.is_deleted = FALSE`;
   const params = [factory_id];
+  if (season_id) { sql += ' AND t.season_id = ?'; params.push(season_id); }
   if (type)   { sql += ' AND t.transaction_type = ?'; params.push(type); }
   if (method) { sql += ' AND t.payment_method = ?';   params.push(method); }
   if (from)   { sql += ' AND t.created_at >= ?';      params.push(from); }
@@ -236,12 +264,16 @@ const getTransactionReport = async (req, res) => {
 
   const [rows] = await db.query(sql, params);
 
+  const totalsParams = [factory_id];
+  let totalsFilter = season_id ? ' AND season_id = ?' : '';
+  if (season_id) totalsParams.push(season_id);
+
   const [totals] = await db.query(
     `SELECT
        COALESCE(SUM(CASE WHEN transaction_type = 'IN' THEN amount ELSE 0 END), 0) AS total_in,
        COALESCE(SUM(CASE WHEN transaction_type = 'OUT' THEN amount ELSE 0 END), 0) AS total_out
-     FROM transactions WHERE factory_id = ? AND is_deleted = FALSE`,
-    [factory_id]
+     FROM transactions WHERE factory_id = ? AND is_deleted = FALSE${totalsFilter}`,
+    totalsParams
   );
 
   return ok(res, { transactions: rows, totals: totals[0] });
@@ -258,16 +290,20 @@ const getDashboard = async (req, res) => {
   const season_id = seasonRows[0]?.id || null;
   const seasonFilter = season_id ? ' AND season_id = ' + season_id : '';
 
-  const [[todaySales], [totalDues], [totalPayables], [cash], [banks], [lowStock], [empOutstanding]] = await Promise.all([
+  const [[todaySales], [salesDues], [purchPayables], [cash], [banks], [lowStock], [empKhata],
+         [obDues], [obPayables], [obEmp]] = await Promise.all([
+    // today's sales
     db.query(
       `SELECT COUNT(*) AS bills, COALESCE(SUM(total_amount),0) AS sales, COALESCE(SUM(paid_amount),0) AS collected
        FROM sales WHERE factory_id = ? AND status = 'ACTIVE' AND DATE(created_at) = ?${seasonFilter}`,
       [factory_id, today]
     ),
+    // current season unpaid sales
     db.query(
       `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM sales WHERE factory_id = ? AND status = 'ACTIVE'${seasonFilter}`,
       [factory_id]
     ),
+    // current season unpaid purchases
     db.query(
       `SELECT COALESCE(SUM(remaining_amount),0) AS total FROM purchases WHERE factory_id = ? AND status = 'ACTIVE'${seasonFilter}`,
       [factory_id]
@@ -280,11 +316,30 @@ const getDashboard = async (req, res) => {
        WHERE i.factory_id = ? AND i.quantity <= 10 AND p.status = 'ACTIVE' ORDER BY i.quantity ASC LIMIT 10`,
       [factory_id]
     ),
+    // current season employee khata outstanding
     db.query(
-      `SELECT COALESCE(SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE 0 END) - SUM(CASE WHEN entry_type='DEBIT' THEN amount ELSE 0 END), 0) AS total
+      `SELECT COALESCE(SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE -amount END), 0) AS total
        FROM employee_khata_entries WHERE factory_id = ?${seasonFilter}`,
       [factory_id]
     ),
+    // opening balance dues (CUSTOMER) for this season
+    season_id ? db.query(
+      `SELECT COALESCE(SUM(balance),0) AS total FROM season_opening_balances
+       WHERE factory_id = ? AND season_id = ? AND entity_type = 'CUSTOMER'`,
+      [factory_id, season_id]
+    ) : Promise.resolve([[{ total: 0 }]]),
+    // opening balance payables (SUPPLIER) for this season
+    season_id ? db.query(
+      `SELECT COALESCE(SUM(balance),0) AS total FROM season_opening_balances
+       WHERE factory_id = ? AND season_id = ? AND entity_type = 'SUPPLIER'`,
+      [factory_id, season_id]
+    ) : Promise.resolve([[{ total: 0 }]]),
+    // opening balance employee outstanding for this season
+    season_id ? db.query(
+      `SELECT COALESCE(SUM(balance),0) AS total FROM season_opening_balances
+       WHERE factory_id = ? AND season_id = ? AND entity_type = 'EMPLOYEE'`,
+      [factory_id, season_id]
+    ) : Promise.resolve([[{ total: 0 }]]),
   ]);
 
   const [recentSales] = await db.query(
@@ -294,11 +349,15 @@ const getDashboard = async (req, res) => {
     [factory_id]
   );
 
+  const total_dues      = parseFloat(salesDues[0]?.total || 0)    + parseFloat(obDues[0]?.total || 0);
+  const total_payables  = parseFloat(purchPayables[0]?.total || 0) + parseFloat(obPayables[0]?.total || 0);
+  const emp_outstanding = parseFloat(empKhata[0]?.total || 0)      + parseFloat(obEmp[0]?.total || 0);
+
   return ok(res, {
     today: todaySales[0],
-    total_dues: totalDues[0]?.total || 0,
-    total_payables: totalPayables[0]?.total || 0,
-    employee_outstanding: empOutstanding[0]?.total || 0,
+    total_dues,
+    total_payables,
+    employee_outstanding: emp_outstanding,
     cash_balance: cash[0]?.balance || 0,
     bank_balances: banks,
     low_stock: lowStock,
@@ -393,11 +452,20 @@ const getIndividualCustomerReport = async (req, res) => {
 
     const [rows] = await db.query(sql, params);
 
+    // opening balance for this season
+    const [obRows] = season_id ? await db.query(
+      `SELECT balance FROM season_opening_balances
+       WHERE entity_type = 'CUSTOMER' AND entity_id = ? AND season_id = ?`,
+      [customer_id, season_id]
+    ) : [[]];
+    const opening_balance = parseFloat(obRows[0]?.balance || 0);
+
     const summary = {
+      opening_balance,
       total_invoices:    rows.length,
       total_billed:      rows.reduce((acc, r) => acc + Number(r.total_amount || 0), 0),
       total_paid:        rows.reduce((acc, r) => acc + Number(r.paid_amount || 0), 0),
-      total_outstanding: rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
+      total_outstanding: opening_balance + rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
     };
 
     return ok(res, { sales: rows, summary });
@@ -430,11 +498,20 @@ const getIndividualSupplierReport = async (req, res) => {
 
     const [rows] = await db.query(sql, params);
 
+    // opening balance for this season
+    const [obRows] = season_id ? await db.query(
+      `SELECT balance FROM season_opening_balances
+       WHERE entity_type = 'SUPPLIER' AND entity_id = ? AND season_id = ?`,
+      [supplier_id, season_id]
+    ) : [[]];
+    const opening_balance = parseFloat(obRows[0]?.balance || 0);
+
     const summary = {
+      opening_balance,
       total_purchases:   rows.length,
       total_billed:      rows.reduce((acc, r) => acc + Number(r.total_amount || 0), 0),
       total_paid:        rows.reduce((acc, r) => acc + Number(r.paid_amount || 0), 0),
-      total_outstanding: rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
+      total_outstanding: opening_balance + rows.reduce((acc, r) => acc + Number(r.remaining_amount || 0), 0),
     };
 
     return ok(res, { purchases: rows, summary });

@@ -10,12 +10,22 @@ const getEmployees = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { search, active } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+    const seasonFilter = season_id ? ` AND season_id = ${season_id}` : '';
+
     let sql = `
       SELECT e.*,
         COALESCE(
           (SELECT SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE -amount END)
            FROM employee_khata_entries
-           WHERE employee_id = e.id AND factory_id = e.factory_id), 0
+           WHERE employee_id = e.id AND factory_id = e.factory_id${seasonFilter}), 0
+        ) + COALESCE(
+          (SELECT balance FROM season_opening_balances
+           WHERE entity_type = 'EMPLOYEE' AND entity_id = e.id AND season_id = ${season_id || 'NULL'}), 0
         ) AS outstanding_balance
       FROM employees e
       WHERE e.factory_id = ?`;
@@ -39,12 +49,22 @@ const getEmployee = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { id } = req.params;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+    const seasonFilter = season_id ? ` AND season_id = ${season_id}` : '';
+
     const [rows] = await db.query(
       `SELECT e.*,
          COALESCE(
            (SELECT SUM(CASE WHEN entry_type='CREDIT' THEN amount ELSE -amount END)
             FROM employee_khata_entries
-            WHERE employee_id = e.id AND factory_id = e.factory_id), 0
+            WHERE employee_id = e.id AND factory_id = e.factory_id${seasonFilter}), 0
+         ) + COALESCE(
+           (SELECT balance FROM season_opening_balances
+            WHERE entity_type = 'EMPLOYEE' AND entity_id = e.id AND season_id = ${season_id || 'NULL'}), 0
          ) AS outstanding_balance
        FROM employees e
        WHERE e.id = ? AND e.factory_id = ?`,
@@ -130,6 +150,12 @@ const getKhata = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { id } = req.params;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     const [rows] = await db.query(
       `SELECT k.*,
          ba.bank_name,
@@ -140,10 +166,20 @@ const getKhata = async (req, res) => {
        LEFT JOIN bank_accounts ba ON ba.id = k.bank_id
        JOIN employee_khata_entries k2 ON k2.id = k.id
        WHERE k.employee_id = ? AND k.factory_id = ?
+         ${season_id ? `AND k.season_id = ${season_id}` : ''}
        ORDER BY k.entry_date ASC, k.created_at ASC`,
       [id, factory_id]
     );
-    return ok(res, { entries: rows });
+
+    // Fetch opening balance for this season
+    const [obRows] = season_id ? await db.query(
+      `SELECT balance FROM season_opening_balances
+       WHERE entity_type = 'EMPLOYEE' AND entity_id = ? AND season_id = ?`,
+      [id, season_id]
+    ) : [[]];
+    const opening_balance = parseFloat(obRows[0]?.balance || 0);
+
+    return ok(res, { entries: rows, opening_balance });
   } catch (e) {
     console.error('getKhata error:', e);
     return fail(res, 'SERVER_ERROR', e.message, 500);
@@ -285,12 +321,19 @@ const getSalaryPayments = async (req, res) => {
   try {
     const { factory_id } = req.user;
     const { employee_id, month } = req.query;
+
+    const [seasonRows] = await db.query(
+      'SELECT id FROM seasons WHERE factory_id = ? AND is_active = TRUE LIMIT 1', [factory_id]
+    );
+    const season_id = seasonRows[0]?.id || null;
+
     let sql = `SELECT sp.*, e.name AS employee_name, ba.bank_name
                FROM employee_salary_payments sp
                JOIN employees e ON e.id = sp.employee_id
                LEFT JOIN bank_accounts ba ON ba.id = sp.bank_id
                WHERE sp.factory_id = ?`;
     const params = [factory_id];
+    if (season_id)   { sql += ' AND sp.season_id = ?'; params.push(season_id); }
     if (employee_id) { sql += ' AND sp.employee_id = ?'; params.push(employee_id); }
     if (month)       { sql += ' AND TO_CHAR(sp.salary_month, \'YYYY-MM\') = ?'; params.push(month); }
     sql += ' ORDER BY sp.salary_month DESC, sp.created_at DESC';
